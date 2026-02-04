@@ -9,22 +9,24 @@ describe('App', () => {
 
   it('renders the title', () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
-      json: () => Promise.resolve({ message: 'Hello from DogTrainr API!' })
+      ok: true,
+      json: () => Promise.resolve([])
     } as Response)
 
     render(<App />)
     expect(screen.getByText('DogTrainr')).toBeInTheDocument()
   })
 
-  it('displays message from API', async () => {
+  it('renders dog list on home route', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
-      json: () => Promise.resolve({ message: 'Hello from DogTrainr API!' })
+      ok: true,
+      json: () => Promise.resolve([])
     } as Response)
 
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByTestId('api-message')).toHaveTextContent('Hello from DogTrainr API!')
+      expect(screen.getByText(/no dogs registered/i)).toBeInTheDocument()
     })
   })
 })

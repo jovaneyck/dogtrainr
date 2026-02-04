@@ -1,21 +1,21 @@
-import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './App.css'
+import DogList from './DogList'
+import DogForm from './DogForm'
+import DogProfile from './DogProfile'
 
 function App() {
-  const [message, setMessage] = useState<string>('Loading...')
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then(res => res.json())
-      .then(data => setMessage(data.message))
-      .catch(() => setMessage('Failed to connect to backend'))
-  }, [])
-
   return (
-    <div className="App">
-      <h1>DogTrainr</h1>
-      <p data-testid="api-message">{message}</p>
-    </div>
+    <BrowserRouter>
+      <div className="App">
+        <h1>DogTrainr</h1>
+        <Routes>
+          <Route path="/" element={<DogList />} />
+          <Route path="/dogs/new" element={<DogForm />} />
+          <Route path="/dogs/:id" element={<DogProfile />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   )
 }
 
