@@ -1,0 +1,17 @@
+{
+  "name": "dogtrainr",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "test:backend": "npm test -w backend",
+    "test:frontend": "npm test -w frontend",
+    "test": "npm test -w backend && npm test -w frontend",
+    "install:all": "npm install -w backend && npm install -w frontend"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ]
+}
