@@ -94,4 +94,66 @@ describe('Dogs API', () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe('PUT /api/dogs/:id/plan', () => {
+    it('assigns a training plan to a dog', async () => {
+      const testImageBuffer = Buffer.from('fake-image-data');
+      const createDogResponse = await request(app)
+        .post('/api/dogs')
+        .field('name', 'Buddy')
+        .attach('picture', testImageBuffer, 'buddy.jpg');
+
+      const dogId = createDogResponse.body.id;
+
+      const response = await request(app)
+        .put(`/api/dogs/${dogId}/plan`)
+        .send({ planId: 'plan-123' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.planId).toBe('plan-123');
+
+      // Verify dog has plan assigned
+      const getResponse = await request(app).get(`/api/dogs/${dogId}`);
+      expect(getResponse.body.planId).toBe('plan-123');
+    });
+
+    it('returns 404 for non-existent dog', async () => {
+      const response = await request(app)
+        .put('/api/dogs/non-existent-id/plan')
+        .send({ planId: 'plan-123' });
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('DELETE /api/dogs/:id/plan', () => {
+    it('unassigns a training plan from a dog', async () => {
+      const testImageBuffer = Buffer.from('fake-image-data');
+      const createDogResponse = await request(app)
+        .post('/api/dogs')
+        .field('name', 'Buddy')
+        .attach('picture', testImageBuffer, 'buddy.jpg');
+
+      const dogId = createDogResponse.body.id;
+
+      // First assign a plan
+      await request(app)
+        .put(`/api/dogs/${dogId}/plan`)
+        .send({ planId: 'plan-123' });
+
+      // Then unassign
+      const response = await request(app).delete(`/api/dogs/${dogId}/plan`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.planId).toBeUndefined();
+
+      // Verify dog has no plan
+      const getResponse = await request(app).get(`/api/dogs/${dogId}`);
+      expect(getResponse.body.planId).toBeUndefined();
+    });
+
+    it('returns 404 for non-existent dog', async () => {
+      const response = await request(app).delete('/api/dogs/non-existent-id/plan');
+      expect(response.status).toBe(404);
+    });
+  });
 });

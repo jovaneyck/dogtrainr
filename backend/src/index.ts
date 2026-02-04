@@ -116,6 +116,37 @@ app.delete('/api/dogs/:id', (req, res) => {
   res.status(204).send();
 });
 
+app.put('/api/dogs/:id/plan', (req, res) => {
+  const { id } = req.params;
+  const filePath = path.join(DATA_DIR, `${id}.json`);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Dog not found' });
+  }
+
+  const { planId } = req.body;
+  const dog = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  dog.planId = planId;
+
+  fs.writeFileSync(filePath, JSON.stringify(dog, null, 2));
+  res.json(dog);
+});
+
+app.delete('/api/dogs/:id/plan', (req, res) => {
+  const { id } = req.params;
+  const filePath = path.join(DATA_DIR, `${id}.json`);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Dog not found' });
+  }
+
+  const dog = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  delete dog.planId;
+
+  fs.writeFileSync(filePath, JSON.stringify(dog, null, 2));
+  res.json(dog);
+});
+
 // Trainings API
 app.get('/api/trainings', (_req, res) => {
   if (!fs.existsSync(TRAININGS_DIR)) {

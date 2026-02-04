@@ -5,6 +5,13 @@ interface Dog {
   id: string
   name: string
   picture: string
+  planId?: string
+}
+
+interface Plan {
+  id: string
+  name: string
+  schedule: Record<string, string[]>
 }
 
 function DogProfile() {
@@ -12,18 +19,32 @@ function DogProfile() {
   const [dog, setDog] = useState<Dog | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [assignedPlan, setAssignedPlan] = useState<Plan | null>(null)
+  const [selectedPlanId, setSelectedPlanId] = useState('')
 
   useEffect(() => {
-    fetch(`/api/dogs/${id}`)
-      .then(res => {
-        if (!res.ok) {
+    Promise.all([
+      fetch(`/api/dogs/${id}`),
+      fetch('/api/plans')
+    ])
+      .then(async ([dogRes, plansRes]) => {
+        if (!dogRes.ok) {
           setNotFound(true)
-          return null
+          setLoading(false)
+          return
         }
-        return res.json()
-      })
-      .then(data => {
-        if (data) setDog(data)
+        const dogData = await dogRes.json()
+        const plansData = await plansRes.json()
+        setDog(dogData)
+        setPlans(plansData)
+
+        if (dogData.planId) {
+          const planRes = await fetch(`/api/plans/${dogData.planId}`)
+          if (planRes.ok) {
+            setAssignedPlan(await planRes.json())
+          }
+        }
         setLoading(false)
       })
       .catch(() => {
@@ -31,6 +52,33 @@ function DogProfile() {
         setLoading(false)
       })
   }, [id])
+
+  const handleAssign = async () => {
+    if (!selectedPlanId) return
+    const res = await fetch(`/api/dogs/${id}/plan`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planId: selectedPlanId })
+    })
+    if (res.ok) {
+      const updatedDog = await res.json()
+      setDog(updatedDog)
+      const planRes = await fetch(`/api/plans/${selectedPlanId}`)
+      if (planRes.ok) {
+        setAssignedPlan(await planRes.json())
+      }
+      setSelectedPlanId('')
+    }
+  }
+
+  const handleUnassign = async () => {
+    const res = await fetch(`/api/dogs/${id}/plan`, { method: 'DELETE' })
+    if (res.ok) {
+      const updatedDog = await res.json()
+      setDog(updatedDog)
+      setAssignedPlan(null)
+    }
+  }
 
   if (loading) {
     return <p>Loading...</p>
@@ -51,6 +99,32 @@ function DogProfile() {
     <div>
       <h2>{dog.name}</h2>
       <img src={`/uploads/dogs/${dog.picture}`} alt={dog.name} />
+
+      <div>
+        <h3>Training Plan</h3>
+        {assignedPlan ? (
+          <div>
+            <p>{assignedPlan.name}</p>
+            <ul>
+              {Object.entries(assignedPlan.schedule).map(([day, trainings]) => (
+                trainings.length > 0 && <li key={day}>{day}: {trainings.join(', ')}</li>
+              ))}
+            </ul>
+            <button onClick={handleUnassign}>Unassign</button>
+          </div>
+        ) : (
+          <div>
+            <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)}>
+              <option value="">Select a plan</option>
+              {plans.map(plan => (
+                <option key={plan.id} value={plan.id}>{plan.name}</option>
+              ))}
+            </select>
+            <button onClick={handleAssign} disabled={!selectedPlanId}>Assign</button>
+          </div>
+        )}
+      </div>
+
       <Link to="/">Back to home</Link>
     </div>
   )
