@@ -9,6 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const DATA_DIR = path.join(process.cwd(), 'data', 'dogs');
 const TRAININGS_DIR = path.join(process.cwd(), 'data', 'trainings');
+const PLANS_DIR = path.join(process.cwd(), 'data', 'plans');
 
 const dogStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -208,6 +209,87 @@ app.post('/api/trainings/:id/images', trainingUpload.single('image'), (req, res)
     filename: file.filename,
     url: `/uploads/trainings/${file.filename}`
   });
+});
+
+// Plans API
+app.get('/api/plans', (_req, res) => {
+  if (!fs.existsSync(PLANS_DIR)) {
+    return res.json([]);
+  }
+  const files = fs.readdirSync(PLANS_DIR).filter(f => f.endsWith('.json'));
+  const plans = files.map(f => {
+    const data = fs.readFileSync(path.join(PLANS_DIR, f), 'utf-8');
+    return JSON.parse(data);
+  });
+  res.json(plans);
+});
+
+app.post('/api/plans', (req, res) => {
+  const { name, schedule } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  if (!fs.existsSync(PLANS_DIR)) {
+    fs.mkdirSync(PLANS_DIR, { recursive: true });
+  }
+
+  const id = crypto.randomUUID();
+  const plan = {
+    id,
+    name,
+    schedule: schedule || {
+      monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: []
+    }
+  };
+
+  fs.writeFileSync(path.join(PLANS_DIR, `${id}.json`), JSON.stringify(plan, null, 2));
+  res.status(201).json(plan);
+});
+
+app.get('/api/plans/:id', (req, res) => {
+  const { id } = req.params;
+  const filePath = path.join(PLANS_DIR, `${id}.json`);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Plan not found' });
+  }
+
+  const data = fs.readFileSync(filePath, 'utf-8');
+  res.json(JSON.parse(data));
+});
+
+app.put('/api/plans/:id', (req, res) => {
+  const { id } = req.params;
+  const filePath = path.join(PLANS_DIR, `${id}.json`);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Plan not found' });
+  }
+
+  const existing = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  const { name, schedule } = req.body;
+  const updated = {
+    ...existing,
+    name: name ?? existing.name,
+    schedule: schedule ?? existing.schedule
+  };
+
+  fs.writeFileSync(filePath, JSON.stringify(updated, null, 2));
+  res.json(updated);
+});
+
+app.delete('/api/plans/:id', (req, res) => {
+  const { id } = req.params;
+  const filePath = path.join(PLANS_DIR, `${id}.json`);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Plan not found' });
+  }
+
+  fs.unlinkSync(filePath);
+  res.status(204).send();
 });
 
 if (process.env.NODE_ENV !== 'test') {

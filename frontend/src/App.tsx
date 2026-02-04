@@ -7,6 +7,10 @@ import TrainingList from './TrainingList'
 import TrainingForm from './TrainingForm'
 import TrainingDetail from './TrainingDetail'
 import TrainingEdit from './TrainingEdit'
+import PlanList from './PlanList'
+import PlanForm from './PlanForm'
+import PlanDetail from './PlanDetail'
+import PlanEdit from './PlanEdit'
 
 function App() {
   return (
@@ -14,7 +18,7 @@ function App() {
       <div className="App">
         <h1>DogTrainr</h1>
         <nav>
-          <Link to="/">Dogs</Link> | <Link to="/trainings">Trainings</Link>
+          <Link to="/">Dogs</Link> | <Link to="/trainings">Trainings</Link> | <Link to="/plans">Plans</Link>
         </nav>
         <Routes>
           <Route path="/" element={<DogList />} />
@@ -24,6 +28,10 @@ function App() {
           <Route path="/trainings/new" element={<TrainingForm />} />
           <Route path="/trainings/:id" element={<TrainingDetail />} />
           <Route path="/trainings/:id/edit" element={<TrainingEdit />} />
+          <Route path="/plans" element={<PlanList />} />
+          <Route path="/plans/new" element={<PlanForm />} />
+          <Route path="/plans/:id" element={<PlanDetail />} />
+          <Route path="/plans/:id/edit" element={<PlanEdit />} />
         </Routes>
       </div>
     </BrowserRouter>

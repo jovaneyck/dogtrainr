@@ -29,4 +29,14 @@ describe('App', () => {
       expect(screen.getByText(/no dogs registered/i)).toBeInTheDocument()
     })
   })
+
+  it('renders plans navigation link', () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([])
+    } as Response)
+
+    render(<App />)
+    expect(screen.getByRole('link', { name: /plans/i })).toBeInTheDocument()
+  })
 })
