@@ -158,4 +158,28 @@ describe('Dogs API', () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe('GET /uploads/dogs/:filename', () => {
+    it('returns the uploaded image data', async () => {
+      const testImageBuffer = Buffer.from('fake-image-data');
+
+      const createResponse = await request(app)
+        .post('/api/dogs')
+        .field('name', 'Buddy')
+        .attach('picture', testImageBuffer, 'buddy.jpg');
+
+      const filename = createResponse.body.picture;
+      const imageResponse = await request(app)
+        .get(`/uploads/dogs/${filename}`)
+        .buffer(true)
+        .parse((res, callback) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
+          res.on('end', () => callback(null, Buffer.concat(chunks)));
+        });
+
+      expect(imageResponse.status).toBe(200);
+      expect(imageResponse.body.toString()).toBe('fake-image-data');
+    });
+  });
 });
