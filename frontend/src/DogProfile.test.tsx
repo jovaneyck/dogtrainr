@@ -19,6 +19,9 @@ describe('DogProfile', () => {
       if (url === '/api/plans') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(plans) } as Response)
       }
+      if (url === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      }
       return Promise.reject(new Error('Unknown URL'))
     })
 
@@ -42,6 +45,9 @@ describe('DogProfile', () => {
         return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({ error: 'Dog not found' }) } as Response)
       }
       if (url === '/api/plans') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      }
+      if (url === '/api/trainings') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
       }
       return Promise.reject(new Error('Unknown URL'))
@@ -87,6 +93,9 @@ describe('DogProfile', () => {
       if (url === '/api/plans/plan-1') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(plan) } as Response)
       }
+      if (url === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      }
       return Promise.reject(new Error('Unknown URL'))
     })
 
@@ -101,6 +110,60 @@ describe('DogProfile', () => {
     await waitFor(() => {
       expect(screen.getByText('Puppy Basics')).toBeInTheDocument()
     })
+  })
+
+  it('displays training names instead of IDs in the schedule', async () => {
+    const trainings = [
+      { id: 'training-1', name: 'Sit', procedure: '', tips: '' },
+      { id: 'training-2', name: 'Down', procedure: '', tips: '' }
+    ]
+    const plan = {
+      id: 'plan-1',
+      name: 'Puppy Basics',
+      schedule: {
+        monday: ['training-1', 'training-2'],
+        tuesday: [],
+        wednesday: ['training-1'],
+        thursday: [],
+        friday: [],
+        saturday: [],
+        sunday: []
+      }
+    }
+    const dog = { id: '123', name: 'Buddy', picture: 'buddy.jpg', planId: 'plan-1' }
+    const plans = [plan]
+
+    vi.spyOn(global, 'fetch').mockImplementation((url) => {
+      if (url === '/api/dogs/123') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(dog) } as Response)
+      }
+      if (url === '/api/plans') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(plans) } as Response)
+      }
+      if (url === '/api/plans/plan-1') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(plan) } as Response)
+      }
+      if (url === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(trainings) } as Response)
+      }
+      return Promise.reject(new Error('Unknown URL'))
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/dogs/123']}>
+        <Routes>
+          <Route path="/dogs/:id" element={<DogProfile />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Puppy Basics')).toBeInTheDocument()
+    })
+    expect(screen.getByText('monday: Sit, Down')).toBeInTheDocument()
+    expect(screen.getByText('wednesday: Sit')).toBeInTheDocument()
+    expect(screen.queryByText(/training-1/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/training-2/)).not.toBeInTheDocument()
   })
 
   it('allows assigning a training plan', async () => {
@@ -125,6 +188,9 @@ describe('DogProfile', () => {
       }
       if (url === '/api/plans/plan-1') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(plan) } as Response)
+      }
+      if (url === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
       }
       return Promise.reject(new Error('Unknown URL'))
     })
@@ -172,6 +238,9 @@ describe('DogProfile', () => {
       }
       if (url === '/api/dogs/123/plan' && options?.method === 'DELETE') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...dog, planId: undefined }) } as Response)
+      }
+      if (url === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
       }
       return Promise.reject(new Error('Unknown URL'))
     })

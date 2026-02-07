@@ -14,6 +14,11 @@ interface Plan {
   schedule: Record<string, string[]>
 }
 
+interface Training {
+  id: string
+  name: string
+}
+
 function DogProfile() {
   const { id } = useParams<{ id: string }>()
   const [dog, setDog] = useState<Dog | null>(null)
@@ -21,14 +26,16 @@ function DogProfile() {
   const [notFound, setNotFound] = useState(false)
   const [plans, setPlans] = useState<Plan[]>([])
   const [assignedPlan, setAssignedPlan] = useState<Plan | null>(null)
+  const [trainings, setTrainings] = useState<Training[]>([])
   const [selectedPlanId, setSelectedPlanId] = useState('')
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/dogs/${id}`),
-      fetch('/api/plans')
+      fetch('/api/plans'),
+      fetch('/api/trainings')
     ])
-      .then(async ([dogRes, plansRes]) => {
+      .then(async ([dogRes, plansRes, trainingsRes]) => {
         if (!dogRes.ok) {
           setNotFound(true)
           setLoading(false)
@@ -36,8 +43,10 @@ function DogProfile() {
         }
         const dogData = await dogRes.json()
         const plansData = await plansRes.json()
+        const trainingsData = await trainingsRes.json()
         setDog(dogData)
         setPlans(plansData)
+        setTrainings(trainingsData)
 
         if (dogData.planId) {
           const planRes = await fetch(`/api/plans/${dogData.planId}`)
@@ -80,6 +89,11 @@ function DogProfile() {
     }
   }
 
+  const getTrainingName = (trainingId: string) => {
+    const training = trainings.find(t => t.id === trainingId)
+    return training?.name || trainingId
+  }
+
   if (loading) {
     return <p>Loading...</p>
   }
@@ -107,7 +121,7 @@ function DogProfile() {
             <p>{assignedPlan.name}</p>
             <ul>
               {Object.entries(assignedPlan.schedule).map(([day, trainings]) => (
-                trainings.length > 0 && <li key={day}>{day}: {trainings.join(', ')}</li>
+                trainings.length > 0 && <li key={day}>{day}: {trainings.map(id => getTrainingName(id)).join(', ')}</li>
               ))}
             </ul>
             <button onClick={handleUnassign}>Unassign</button>
