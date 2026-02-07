@@ -1,6 +1,6 @@
 # Outline
 
-Let's build a web app with a node type script backend and uh react frontend.
+Let's build a web app with a node type script backend and react frontend.
 
 # Bootstrapping
 
@@ -8,7 +8,7 @@ I want you to scaffold this project so that you can run the frontend and backend
 
 # Architecture
 
-Don't worry about security and user auth. Don't uh implement the database, just use a file-based directory structure.
+Don't worry about security and user auth. Don't implement the database, just use a file-based directory structure.
 
 # Functionality 
 
@@ -22,6 +22,8 @@ Finally, I should be able to assign training plans to dogs. This happens on the 
 
 Plan this app out using the task list tool. 
 For every task that requires code editing, use git worktrees. Make sure the work is merged back before completing a task.
+
+# Implementation plan 
 
 * Start with scaffolding an end-to-end hello world app.
 * Validate that bootstrap works
