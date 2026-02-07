@@ -1,22 +1,24 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { app } from './index.js';
+import { createApp } from './index.js';
 import request from 'supertest';
 import fs from 'fs';
 import path from 'path';
-
-const DATA_DIR = path.join(process.cwd(), 'data', 'trainings');
+import crypto from 'crypto';
+import type { Express } from 'express';
 
 describe('Trainings API', () => {
+  let app: Express;
+  let dataRoot: string;
+
   beforeEach(() => {
-    if (fs.existsSync(DATA_DIR)) {
-      fs.rmSync(DATA_DIR, { recursive: true });
-    }
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+    dataRoot = path.join(process.cwd(), 'data', `test-${crypto.randomUUID()}`);
+    fs.mkdirSync(path.join(dataRoot, 'trainings'), { recursive: true });
+    app = createApp(dataRoot);
   });
 
   afterEach(() => {
-    if (fs.existsSync(DATA_DIR)) {
-      fs.rmSync(DATA_DIR, { recursive: true });
+    if (fs.existsSync(dataRoot)) {
+      fs.rmSync(dataRoot, { recursive: true });
     }
   });
 
