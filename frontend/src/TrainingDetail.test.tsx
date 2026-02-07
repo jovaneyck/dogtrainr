@@ -33,6 +33,36 @@ describe('TrainingDetail', () => {
     })
   })
 
+  it('renders external links in markdown with target="_blank" and rel="noopener noreferrer"', async () => {
+    const training = {
+      id: '1',
+      name: 'Sit',
+      procedure: 'Watch [this video](https://www.youtube.com/watch?v=123)',
+      tips: 'See https://example.com for more'
+    }
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(training)
+    } as Response)
+
+    render(
+      <MemoryRouter initialEntries={['/trainings/1']}>
+        <Routes>
+          <Route path="/trainings/:id" element={<TrainingDetail />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Sit')).toBeInTheDocument()
+    })
+
+    const videoLink = screen.getByRole('link', { name: 'this video' })
+    expect(videoLink).toHaveAttribute('href', 'https://www.youtube.com/watch?v=123')
+    expect(videoLink).toHaveAttribute('target', '_blank')
+    expect(videoLink).toHaveAttribute('rel', expect.stringContaining('noopener'))
+  })
+
   it('shows not found for non-existent training', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,
