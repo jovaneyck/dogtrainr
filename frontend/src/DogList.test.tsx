@@ -47,4 +47,53 @@ describe('DogList', () => {
       expect(screen.getByText('Max')).toBeInTheDocument()
     })
   })
+
+  it('shows profile picture badges for dogs with pictures', async () => {
+    const dogs = [
+      { id: '1', name: 'Buddy', picture: 'buddy.jpg' },
+      { id: '2', name: 'Max', picture: 'max.jpg' }
+    ]
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(dogs)
+    } as Response)
+
+    render(
+      <BrowserRouter>
+        <DogList />
+      </BrowserRouter>
+    )
+
+    await waitFor(() => {
+      const buddyImg = screen.getByAltText('Buddy')
+      expect(buddyImg).toBeInTheDocument()
+      expect(buddyImg).toHaveAttribute('src', '/uploads/dogs/buddy.jpg')
+
+      const maxImg = screen.getByAltText('Max')
+      expect(maxImg).toBeInTheDocument()
+      expect(maxImg).toHaveAttribute('src', '/uploads/dogs/max.jpg')
+    })
+  })
+
+  it('does not render image for dogs without a picture', async () => {
+    const dogs = [
+      { id: '1', name: 'Buddy', picture: '' },
+      { id: '2', name: 'Max' }
+    ]
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(dogs)
+    } as Response)
+
+    render(
+      <BrowserRouter>
+        <DogList />
+      </BrowserRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Buddy')).toBeInTheDocument()
+    })
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
 })

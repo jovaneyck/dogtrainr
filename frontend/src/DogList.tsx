@@ -40,7 +40,16 @@ function DogList() {
       <ul>
         {dogs.map(dog => (
           <li key={dog.id}>
-            <Link to={`/dogs/${dog.id}`}>{dog.name}</Link>
+            <Link to={`/dogs/${dog.id}`}>
+              {dog.picture && (
+                <img
+                  src={`/uploads/dogs/${dog.picture}`}
+                  alt={dog.name}
+                  style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', marginRight: 8, verticalAlign: 'middle' }}
+                />
+              )}
+              {dog.name}
+            </Link>
           </li>
         ))}
       </ul>
