@@ -23,29 +23,47 @@ function TrainingList() {
   }, [])
 
   if (loading) {
-    return <p>Loading...</p>
+    return <p className="text-slate-500 text-center py-12">Loading...</p>
   }
 
   if (trainings.length === 0) {
     return (
-      <div>
-        <p>No trainings yet.</p>
-        <Link to="/trainings/new">Create a training</Link>
+      <div className="flex flex-col items-center justify-center py-16 space-y-4">
+        <p className="text-slate-500 text-lg">No trainings yet.</p>
+        <Link
+          to="/trainings/new"
+          className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+        >
+          Create a training
+        </Link>
       </div>
     )
   }
 
   return (
-    <div>
-      <h2>Trainings</h2>
-      <ul>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-slate-800">Trainings</h2>
+        <Link
+          to="/trainings/new"
+          className="bg-blue-600 text-white w-10 h-10 rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center justify-center text-xl"
+          aria-label="Add training"
+        >
+          +
+        </Link>
+      </div>
+      <div className="space-y-3">
         {trainings.map(training => (
-          <li key={training.id}>
-            <Link to={`/trainings/${training.id}`}>{training.name}</Link>
-          </li>
+          <Link
+            key={training.id}
+            to={`/trainings/${training.id}`}
+            className="bg-white rounded-2xl shadow-sm p-4 flex items-center justify-between hover:shadow-md transition-shadow"
+          >
+            <span className="text-base text-slate-800 font-medium">{training.name}</span>
+            <span className="text-slate-400">&rsaquo;</span>
+          </Link>
         ))}
-      </ul>
-      <Link to="/trainings/new">Create a training</Link>
+      </div>
     </div>
   )
 }
