@@ -21,28 +21,28 @@ function TrainingPlanSchedule({ schedule, trainings }: TrainingPlanScheduleProps
   }
 
   return (
-    <table>
-      <thead>
-        <tr>
-          {DAYS.map(day => (
-            <th key={day}>{day.charAt(0).toUpperCase() + day.slice(1)}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          {DAYS.map(day => (
-            <td key={day}>
+    <div className="bg-white rounded-2xl shadow-sm p-6">
+      <div className="grid grid-cols-7 gap-2">
+        {DAYS.map(day => (
+          <div key={day} className="flex flex-col gap-2">
+            <div className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-sm font-medium text-center">
+              {day.charAt(0).toUpperCase() + day.slice(1)}
+            </div>
+            <div className="flex flex-col gap-1">
               {schedule[day]?.map(trainingId => (
-                <div key={trainingId}>
-                  <Link to={`/trainings/${trainingId}`}>{getTrainingName(trainingId)}</Link>
-                </div>
+                <Link
+                  key={trainingId}
+                  to={`/trainings/${trainingId}`}
+                  className="text-blue-600 hover:text-blue-700 text-sm transition-colors"
+                >
+                  {getTrainingName(trainingId)}
+                </Link>
               ))}
-            </td>
-          ))}
-        </tr>
-      </tbody>
-    </table>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 

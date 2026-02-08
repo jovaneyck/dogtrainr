@@ -42,14 +42,14 @@ function PlanDetail() {
   }, [id])
 
   if (loading) {
-    return <p>Loading...</p>
+    return <p className="text-slate-500">Loading...</p>
   }
 
   if (notFound) {
     return (
-      <div>
-        <p>Plan not found.</p>
-        <Link to="/plans">Back to plans</Link>
+      <div className="flex flex-col items-center justify-center py-16 space-y-4">
+        <p className="text-lg text-slate-500">Plan not found.</p>
+        <Link to="/plans" className="text-blue-600 hover:text-blue-700 transition-colors">Back to plans</Link>
       </div>
     )
   }
@@ -59,11 +59,23 @@ function PlanDetail() {
   }
 
   return (
-    <div>
-      <h2>{plan.name}</h2>
+    <div className="space-y-6">
+      <Link to="/plans" className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-800 transition-colors">
+        <span>&larr;</span> Back to plans
+      </Link>
+
+      <h2 className="text-2xl font-bold text-slate-800">{plan.name}</h2>
+
       <TrainingPlanSchedule schedule={plan.schedule} trainings={trainings} />
-      <Link to="/plans">Back to plans</Link>
-      <Link to={`/plans/${plan.id}/edit`}>Edit</Link>
+
+      <div className="flex items-center gap-4">
+        <Link
+          to={`/plans/${plan.id}/edit`}
+          className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+        >
+          Edit
+        </Link>
+      </div>
     </div>
   )
 }
