@@ -1,0 +1,3 @@
+* Generate a plan using TaskList based on the spec and tasks given.
+* Each task should have become seperate item on the TaskList. Reason about task dependencies and use the "blocked by" to work out a dependency graph and allow for parallel work where the work is clearly independent.
+* Each task should be completely handled by a subagent. Start a subagent that works in its seperate git worktree while working on a task. Done means task has been completed, tests have been written/updated accordingly, code compiles and all tests pass. When the task is done, have the subagent commit the changes back to main and remove the work tree. Only then mark the task as done in the tasklist.
