@@ -112,7 +112,7 @@ function DogProfile() {
   return (
     <div>
       <h2>{dog.name}</h2>
-      <img src={`/uploads/dogs/${dog.picture}`} alt={dog.name} />
+      <img src={`/uploads/dogs/${dog.picture}`} alt={dog.name} style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
 
       <div>
         <h3>Training Plan</h3>
