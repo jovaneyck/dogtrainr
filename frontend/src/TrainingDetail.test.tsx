@@ -63,6 +63,35 @@ describe('TrainingDetail', () => {
     expect(videoLink).toHaveAttribute('rel', expect.stringContaining('noopener'))
   })
 
+  it('prepends https:// to links missing a protocol', async () => {
+    const training = {
+      id: '1',
+      name: 'Sit',
+      procedure: 'Watch [youtube](www.youtube.com)',
+      tips: ''
+    }
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(training)
+    } as Response)
+
+    render(
+      <MemoryRouter initialEntries={['/trainings/1']}>
+        <Routes>
+          <Route path="/trainings/:id" element={<TrainingDetail />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Sit')).toBeInTheDocument()
+    })
+
+    const link = screen.getByRole('link', { name: 'youtube' })
+    expect(link).toHaveAttribute('href', 'https://www.youtube.com')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
   it('shows not found for non-existent training', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,

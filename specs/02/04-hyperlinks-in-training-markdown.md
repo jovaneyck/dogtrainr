@@ -11,3 +11,8 @@ In the training markdown, hyperlinks to external websites (e.g. https://www.yout
 - Internal app navigation continues to work
 - All tests pass
 - Code compiles
+
+## Update after testing
+
+Fixed: URLs without a protocol (e.g. `www.google.com`) now get `https://` prepended so the browser navigates to the external site instead of treating it as a relative path.
+

@@ -53,15 +53,17 @@ function TrainingDetail() {
       <h2>{training.name}</h2>
       <h3>Procedure</h3>
       <MDEditor.Markdown source={training.procedure} components={{
-        a: ({ href, children, ...props }) => (
-          <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
-        )
+        a: ({ href, children, ...props }) => {
+          const url = href && !/^https?:\/\//.test(href) ? `https://${href}` : href
+          return <a href={url} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+        }
       }} />
       <h3>Tips</h3>
       <MDEditor.Markdown source={training.tips} components={{
-        a: ({ href, children, ...props }) => (
-          <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
-        )
+        a: ({ href, children, ...props }) => {
+          const url = href && !/^https?:\/\//.test(href) ? `https://${href}` : href
+          return <a href={url} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+        }
       }} />
       <Link to="/trainings">Back to trainings</Link>
       <Link to={`/trainings/${training.id}/edit`}>Edit</Link>
