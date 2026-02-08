@@ -17,7 +17,7 @@ function App() {
   return (
     <BrowserRouter>
       <div className="App">
-        <h1><img src={logo} alt="DogTrainr logo" className="app-logo" />DogTrainr</h1>
+        <h1><Link to="/"><img src={logo} alt="DogTrainr logo" className="app-logo" />DogTrainr</Link></h1>
         <nav>
           <Link to="/">Dogs</Link> | <Link to="/trainings">Trainings</Link> | <Link to="/plans">Plans</Link>
         </nav>

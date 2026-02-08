@@ -30,6 +30,17 @@ describe('App', () => {
     })
   })
 
+  it('logo links to homepage', () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([])
+    } as Response)
+
+    render(<App />)
+    const logoLink = screen.getByRole('link', { name: /dogtrainr/i })
+    expect(logoLink).toHaveAttribute('href', '/')
+  })
+
   it('renders plans navigation link', () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
