@@ -1,6 +1,6 @@
 # Profile Picture Badge on Homepage
 
-## Status: PENDING
+## Status: COMPLETED
 
 ## Problem
 On the homepage where dogs are listed, there is no profile image shown next to the dog's name.

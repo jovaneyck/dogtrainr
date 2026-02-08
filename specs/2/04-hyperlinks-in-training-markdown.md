@@ -1,6 +1,6 @@
 # Hyperlinks in Training Markdown
 
-## Status: PENDING
+## Status: COMPLETED
 
 ## Problem
 In the training markdown, hyperlinks to external websites (e.g. https://www.youtube.com) are not working. They need to function exactly like standard `<a href>` tags on a web page.

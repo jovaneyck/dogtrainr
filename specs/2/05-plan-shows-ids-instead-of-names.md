@@ -1,6 +1,6 @@
 # Dog Training Plans Show Training IDs Instead of Names
 
-## Status: PENDING
+## Status: COMPLETED
 
 ## Problem
 When rendering a dog's training plan, training IDs are displayed instead of training names. The fix should NOT duplicate the name in the JSON — instead, do a lookup by ID when rendering.

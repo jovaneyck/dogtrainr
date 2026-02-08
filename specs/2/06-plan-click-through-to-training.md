@@ -1,6 +1,6 @@
 # Dog Training Plan Does Not Allow Click Through to Training Details
 
-## Status: PENDING
+## Status: COMPLETED
 
 ## Problem
 In a dog's training plan view, the individual trainings listed are not clickable — there is no way to navigate to the training detail page from the plan.

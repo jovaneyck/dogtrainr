@@ -1,6 +1,6 @@
 # Broken Image Download
 
-## Status: PENDING
+## Status: COMPLETED
 
 ## Problem
 The image upload works, but when getting an image from the backend, the response is HTTP 200 with an empty body.
