@@ -32,14 +32,14 @@ function TrainingDetail() {
   }, [id])
 
   if (loading) {
-    return <p>Loading...</p>
+    return <p className="text-slate-500 text-center py-12">Loading...</p>
   }
 
   if (notFound) {
     return (
-      <div>
-        <p>Training not found.</p>
-        <Link to="/trainings">Back to trainings</Link>
+      <div className="flex flex-col items-center justify-center py-16 space-y-4">
+        <p className="text-lg text-slate-500">Training not found.</p>
+        <Link to="/trainings" className="text-blue-600 hover:text-blue-700 font-medium">Back to trainings</Link>
       </div>
     )
   }
@@ -49,24 +49,37 @@ function TrainingDetail() {
   }
 
   return (
-    <div>
-      <h2>{training.name}</h2>
-      <h3>Procedure</h3>
-      <MDEditor.Markdown source={training.procedure} components={{
-        a: ({ href, children, ...props }) => {
-          const url = href && !/^https?:\/\//.test(href) ? `https://${href}` : href
-          return <a href={url} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
-        }
-      }} />
-      <h3>Tips</h3>
-      <MDEditor.Markdown source={training.tips} components={{
-        a: ({ href, children, ...props }) => {
-          const url = href && !/^https?:\/\//.test(href) ? `https://${href}` : href
-          return <a href={url} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
-        }
-      }} />
-      <Link to="/trainings">Back to trainings</Link>
-      <Link to={`/trainings/${training.id}/edit`}>Edit</Link>
+    <div className="space-y-6">
+      <Link to="/trainings" className="inline-flex items-center text-slate-600 hover:text-slate-800 transition-colors">
+        <span className="mr-1">&larr;</span> Back
+      </Link>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-slate-800">{training.name}</h2>
+        <Link
+          to={`/trainings/${training.id}/edit`}
+          className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+        >
+          Edit
+        </Link>
+      </div>
+      <div className="bg-white rounded-2xl shadow-sm p-6 space-y-2">
+        <h3 className="text-lg font-semibold text-slate-700">Procedure</h3>
+        <MDEditor.Markdown source={training.procedure} components={{
+          a: ({ href, children, ...props }) => {
+            const url = href && !/^https?:\/\//.test(href) ? `https://${href}` : href
+            return <a href={url} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+          }
+        }} />
+      </div>
+      <div className="bg-white rounded-2xl shadow-sm p-6 space-y-2">
+        <h3 className="text-lg font-semibold text-slate-700">Tips</h3>
+        <MDEditor.Markdown source={training.tips} components={{
+          a: ({ href, children, ...props }) => {
+            const url = href && !/^https?:\/\//.test(href) ? `https://${href}` : href
+            return <a href={url} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+          }
+        }} />
+      </div>
     </div>
   )
 }
