@@ -1,0 +1,1 @@
+Click logo to go to homepage
