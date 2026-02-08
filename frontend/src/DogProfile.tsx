@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import TrainingPlanSchedule from './TrainingPlanSchedule'
 
 interface Dog {
   id: string
@@ -89,11 +90,6 @@ function DogProfile() {
     }
   }
 
-  const getTrainingName = (trainingId: string) => {
-    const training = trainings.find(t => t.id === trainingId)
-    return training?.name || trainingId
-  }
-
   if (loading) {
     return <p>Loading...</p>
   }
@@ -119,21 +115,7 @@ function DogProfile() {
         {assignedPlan ? (
           <div>
             <p>{assignedPlan.name}</p>
-            <ul>
-              {Object.entries(assignedPlan.schedule).map(([day, trainings]) => (
-                trainings.length > 0 && (
-                  <li key={day}>
-                    {day}:{' '}
-                    {trainings.map((id, index) => (
-                      <span key={id}>
-                        {index > 0 && ', '}
-                        <Link to={`/trainings/${id}`}>{getTrainingName(id)}</Link>
-                      </span>
-                    ))}
-                  </li>
-                )
-              ))}
-            </ul>
+            <TrainingPlanSchedule schedule={assignedPlan.schedule} trainings={trainings} />
             <button onClick={handleUnassign}>Unassign</button>
           </div>
         ) : (
