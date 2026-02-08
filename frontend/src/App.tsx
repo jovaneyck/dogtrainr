@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import './App.css'
+import logo from './assets/logo.png'
 import DogList from './DogList'
 import DogForm from './DogForm'
 import DogProfile from './DogProfile'
@@ -16,7 +17,7 @@ function App() {
   return (
     <BrowserRouter>
       <div className="App">
-        <h1>DogTrainr</h1>
+        <h1><img src={logo} alt="DogTrainr logo" className="app-logo" />DogTrainr</h1>
         <nav>
           <Link to="/">Dogs</Link> | <Link to="/trainings">Trainings</Link> | <Link to="/plans">Plans</Link>
         </nav>

@@ -4,3 +4,10 @@
   padding: 2rem;
   text-align: center;
 }
+
+.app-logo {
+  height: 1.5em;
+  vertical-align: middle;
+  margin-right: 0.3em;
+  border-radius: 50%;
+}
