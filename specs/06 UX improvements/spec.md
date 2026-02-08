@@ -5,7 +5,7 @@
 
 # Process
 
-* Take a screenshot of EVERY page in the current app
+* Take a screenshot of EVERY page in the current app using the "take-screenshot" skill
 * Analyze each screenshot:
     * are the buttons spaced correctly?
     * Enough padding between components? 
