@@ -160,10 +160,75 @@ describe('DogProfile', () => {
     await waitFor(() => {
       expect(screen.getByText('Puppy Basics')).toBeInTheDocument()
     })
-    expect(screen.getByText('monday: Sit, Down')).toBeInTheDocument()
-    expect(screen.getByText('wednesday: Sit')).toBeInTheDocument()
+    const mondayItem = screen.getByText((_content, element) =>
+      element?.tagName === 'LI' && element?.textContent === 'monday: Sit, Down'
+    )
+    expect(mondayItem).toBeInTheDocument()
+
+    const wednesdayItem = screen.getByText((_content, element) =>
+      element?.tagName === 'LI' && element?.textContent === 'wednesday: Sit'
+    )
+    expect(wednesdayItem).toBeInTheDocument()
+
     expect(screen.queryByText(/training-1/)).not.toBeInTheDocument()
     expect(screen.queryByText(/training-2/)).not.toBeInTheDocument()
+  })
+
+  it('renders training names as links to their detail pages', async () => {
+    const trainings = [
+      { id: 'training-1', name: 'Sit', procedure: '', tips: '' },
+      { id: 'training-2', name: 'Down', procedure: '', tips: '' }
+    ]
+    const plan = {
+      id: 'plan-1',
+      name: 'Puppy Basics',
+      schedule: {
+        monday: ['training-1', 'training-2'],
+        tuesday: [],
+        wednesday: ['training-1'],
+        thursday: [],
+        friday: [],
+        saturday: [],
+        sunday: []
+      }
+    }
+    const dog = { id: '123', name: 'Buddy', picture: 'buddy.jpg', planId: 'plan-1' }
+    const plans = [plan]
+
+    vi.spyOn(global, 'fetch').mockImplementation((url) => {
+      if (url === '/api/dogs/123') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(dog) } as Response)
+      }
+      if (url === '/api/plans') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(plans) } as Response)
+      }
+      if (url === '/api/plans/plan-1') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(plan) } as Response)
+      }
+      if (url === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(trainings) } as Response)
+      }
+      return Promise.reject(new Error('Unknown URL'))
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/dogs/123']}>
+        <Routes>
+          <Route path="/dogs/:id" element={<DogProfile />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Puppy Basics')).toBeInTheDocument()
+    })
+
+    const sitLinks = screen.getAllByRole('link', { name: 'Sit' })
+    expect(sitLinks).toHaveLength(2)
+    expect(sitLinks[0]).toHaveAttribute('href', '/trainings/training-1')
+
+    const downLink = screen.getByRole('link', { name: 'Down' })
+    expect(downLink).toHaveAttribute('href', '/trainings/training-2')
   })
 
   it('allows assigning a training plan', async () => {

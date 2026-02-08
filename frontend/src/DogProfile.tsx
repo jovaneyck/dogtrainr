@@ -121,7 +121,17 @@ function DogProfile() {
             <p>{assignedPlan.name}</p>
             <ul>
               {Object.entries(assignedPlan.schedule).map(([day, trainings]) => (
-                trainings.length > 0 && <li key={day}>{day}: {trainings.map(id => getTrainingName(id)).join(', ')}</li>
+                trainings.length > 0 && (
+                  <li key={day}>
+                    {day}:{' '}
+                    {trainings.map((id, index) => (
+                      <span key={id}>
+                        {index > 0 && ', '}
+                        <Link to={`/trainings/${id}`}>{getTrainingName(id)}</Link>
+                      </span>
+                    ))}
+                  </li>
+                )
               ))}
             </ul>
             <button onClick={handleUnassign}>Unassign</button>

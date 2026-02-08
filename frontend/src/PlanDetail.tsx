@@ -82,7 +82,9 @@ function PlanDetail() {
             {DAYS.map(day => (
               <td key={day}>
                 {plan.schedule[day]?.map(trainingId => (
-                  <div key={trainingId}>{getTrainingName(trainingId)}</div>
+                  <div key={trainingId}>
+                    <Link to={`/trainings/${trainingId}`}>{getTrainingName(trainingId)}</Link>
+                  </div>
                 ))}
               </td>
             ))}
