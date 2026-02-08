@@ -22,29 +22,46 @@ function PlanList() {
   }, [])
 
   if (loading) {
-    return <p>Loading...</p>
+    return <p className="text-slate-500">Loading...</p>
   }
 
   if (plans.length === 0) {
     return (
-      <div>
-        <p>No plans yet.</p>
-        <Link to="/plans/new">Create a plan</Link>
+      <div className="flex flex-col items-center justify-center py-16 space-y-4">
+        <p className="text-slate-500 text-lg">No plans yet.</p>
+        <Link
+          to="/plans/new"
+          className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+        >
+          Create a plan
+        </Link>
       </div>
     )
   }
 
   return (
-    <div>
-      <h2>Training Plans</h2>
-      <ul>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-slate-800">Training Plans</h2>
+        <Link
+          to="/plans/new"
+          className="bg-blue-600 text-white w-10 h-10 rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center justify-center text-xl"
+        >
+          +
+        </Link>
+      </div>
+      <div className="space-y-3">
         {plans.map(plan => (
-          <li key={plan.id}>
-            <Link to={`/plans/${plan.id}`}>{plan.name}</Link>
-          </li>
+          <Link
+            key={plan.id}
+            to={`/plans/${plan.id}`}
+            className="bg-white rounded-2xl shadow-sm p-4 flex items-center justify-between hover:shadow-md transition-shadow"
+          >
+            <span className="text-slate-800 font-medium">{plan.name}</span>
+            <span className="text-slate-400">&rsaquo;</span>
+          </Link>
         ))}
-      </ul>
-      <Link to="/plans/new">Create a plan</Link>
+      </div>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 
 interface Training {
   id: string
@@ -57,51 +57,62 @@ function PlanForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Create Plan</h2>
-      <div>
-        <label htmlFor="name">Name</label>
-        <input
-          id="name"
-          type="text"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          required
-        />
-      </div>
-      <table>
-        <thead>
-          <tr>
+    <div className="space-y-6">
+      <Link to="/plans" className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-800 transition-colors">
+        <span>&larr;</span> Back to plans
+      </Link>
+
+      <h2 className="text-2xl font-bold text-slate-800">Create Plan</h2>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+          <div className="space-y-1">
+            <label htmlFor="name" className="block text-sm font-medium text-slate-700">Name</label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              required
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <div className="grid grid-cols-7 gap-2">
             {DAYS.map(day => (
-              <th key={day}>{day.charAt(0).toUpperCase() + day.slice(1)}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            {DAYS.map(day => (
-              <td key={day}>
-                {trainings.map(training => (
-                  <div key={training.id}>
-                    <label>
+              <div key={day} className="flex flex-col gap-2">
+                <div className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-sm font-medium text-center">
+                  {day.charAt(0).toUpperCase() + day.slice(1)}
+                </div>
+                <div className="space-y-2">
+                  {trainings.map(training => (
+                    <label key={training.id} className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={schedule[day].includes(training.id)}
                         onChange={() => toggleTraining(day, training.id)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                       />
                       {training.name}
                     </label>
-                  </div>
-                ))}
-              </td>
+                  ))}
+                </div>
+              </div>
             ))}
-          </tr>
-        </tbody>
-      </table>
-      <button type="submit" disabled={submitting}>
-        {submitting ? 'Saving...' : 'Save Plan'}
-      </button>
-    </form>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+        >
+          {submitting ? 'Saving...' : 'Save Plan'}
+        </button>
+      </form>
+    </div>
   )
 }
 
