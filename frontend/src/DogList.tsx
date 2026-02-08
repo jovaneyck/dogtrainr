@@ -22,38 +22,56 @@ function DogList() {
   }, [])
 
   if (loading) {
-    return <p>Loading...</p>
+    return <p className="text-slate-500 text-center py-12">Loading...</p>
   }
 
   if (dogs.length === 0) {
     return (
-      <div>
-        <p>No dogs registered yet.</p>
-        <Link to="/dogs/new">Register a dog</Link>
+      <div className="flex flex-col items-center justify-center py-16 space-y-4">
+        <p className="text-slate-500 text-lg">No dogs registered yet.</p>
+        <Link
+          to="/dogs/new"
+          className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+        >
+          Register a dog
+        </Link>
       </div>
     )
   }
 
   return (
-    <div>
-      <h2>Your Dogs</h2>
-      <ul>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-slate-800">Your Dogs</h2>
+        <Link
+          to="/dogs/new"
+          className="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold hover:bg-blue-700 transition-colors"
+          aria-label="Register a dog"
+        >
+          +
+        </Link>
+      </div>
+      <div className="space-y-3">
         {dogs.map(dog => (
-          <li key={dog.id}>
-            <Link to={`/dogs/${dog.id}`}>
+          <Link
+            key={dog.id}
+            to={`/dogs/${dog.id}`}
+            className="bg-white rounded-2xl shadow-sm p-4 flex items-center justify-between hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-3">
               {dog.picture && (
                 <img
                   src={`/uploads/dogs/${dog.picture}`}
                   alt={dog.name}
-                  style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', marginRight: 8, verticalAlign: 'middle' }}
+                  className="w-12 h-12 rounded-full object-cover"
                 />
               )}
-              {dog.name}
-            </Link>
-          </li>
+              <span className="text-base text-slate-800 font-medium">{dog.name}</span>
+            </div>
+            <span className="text-slate-400 text-lg">›</span>
+          </Link>
         ))}
-      </ul>
-      <Link to="/dogs/new">Register a dog</Link>
+      </div>
     </div>
   )
 }

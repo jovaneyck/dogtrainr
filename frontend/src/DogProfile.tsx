@@ -91,14 +91,16 @@ function DogProfile() {
   }
 
   if (loading) {
-    return <p>Loading...</p>
+    return <p className="text-slate-500 text-center py-12">Loading...</p>
   }
 
   if (notFound) {
     return (
-      <div>
-        <p>Dog not found</p>
-        <Link to="/">Back to home</Link>
+      <div className="space-y-4">
+        <Link to="/" className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-800 transition-colors">
+          <span>←</span> <span>Back</span>
+        </Link>
+        <p className="text-slate-600">Dog not found</p>
       </div>
     )
   }
@@ -106,32 +108,54 @@ function DogProfile() {
   if (!dog) return null
 
   return (
-    <div>
-      <h2>{dog.name}</h2>
-      <img src={`/uploads/dogs/${dog.picture}`} alt={dog.name} style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} />
+    <div className="space-y-6">
+      <Link to="/" className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-800 transition-colors">
+        <span>←</span> <span>Back</span>
+      </Link>
 
-      <div>
-        <h3>Training Plan</h3>
+      <h2 className="text-2xl font-bold text-slate-800">{dog.name}</h2>
+
+      <img
+        src={`/uploads/dogs/${dog.picture}`}
+        alt={dog.name}
+        className="rounded-2xl max-h-80 w-full object-cover"
+      />
+
+      <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-slate-700">Training Plan</h3>
         {assignedPlan ? (
-          <div>
-            <p>{assignedPlan.name}</p>
+          <div className="space-y-4">
+            <p className="text-base text-slate-800 font-medium">{assignedPlan.name}</p>
             <TrainingPlanSchedule schedule={assignedPlan.schedule} trainings={trainings} />
-            <button onClick={handleUnassign}>Unassign</button>
+            <button
+              onClick={handleUnassign}
+              className="bg-red-50 text-red-600 px-6 py-3 rounded-xl font-medium hover:bg-red-100 transition-colors"
+            >
+              Unassign
+            </button>
           </div>
         ) : (
-          <div>
-            <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)}>
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedPlanId}
+              onChange={e => setSelectedPlanId(e.target.value)}
+              className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
               <option value="">Select a plan</option>
               {plans.map(plan => (
                 <option key={plan.id} value={plan.id}>{plan.name}</option>
               ))}
             </select>
-            <button onClick={handleAssign} disabled={!selectedPlanId}>Assign</button>
+            <button
+              onClick={handleAssign}
+              disabled={!selectedPlanId}
+              className="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Assign
+            </button>
           </div>
         )}
       </div>
-
-      <Link to="/">Back to home</Link>
     </div>
   )
 }
