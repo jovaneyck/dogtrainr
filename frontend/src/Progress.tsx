@@ -70,6 +70,7 @@ function Progress() {
   const [weekStart, setWeekStart] = useState<Date>(() => getMonday(new Date()))
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [loading, setLoading] = useState(true)
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
 
   const weekDays = getWeekDays(weekStart)
 
@@ -98,6 +99,14 @@ function Progress() {
   useEffect(() => {
     fetchSessions(weekStart)
   }, [weekStart, fetchSessions])
+
+  const handleRemove = async (sessionId: string) => {
+    const res = await fetch(`/api/dogs/${dogId}/sessions/${sessionId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setExpandedSessionId(null)
+      await fetchSessions(weekStart)
+    }
+  }
 
   const navigateWeek = (direction: number) => {
     setWeekStart(prev => {
@@ -183,31 +192,69 @@ function Progress() {
           <p className="text-slate-500">No sessions scheduled</p>
         ) : (
           <div className="space-y-2">
-            {daySessions.map((session, i) => (
-              <div key={session.id ?? `planned-${i}`} className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between">
-                <span className="font-medium text-slate-800">
-                  {trainingMap.get(session.trainingId) ?? session.trainingId}
-                </span>
-                <div className="flex items-center gap-2">
-                  {session.status === 'completed' && (
-                    <>
-                      {session.score != null && (
-                        <span className="text-slate-600">{session.score}/10</span>
+            {daySessions.map((session, i) => {
+              const isExpandable = session.status === 'completed' || session.status === 'skipped'
+              const isExpanded = isExpandable && expandedSessionId === session.id
+              const trainingName = trainingMap.get(session.trainingId) ?? session.trainingId
+
+              return (
+                <div
+                  key={session.id ?? `planned-${i}`}
+                  className="bg-white rounded-xl shadow-sm p-4"
+                  onClick={isExpandable ? () => setExpandedSessionId(isExpanded ? null : session.id!) : undefined}
+                  style={isExpandable ? { cursor: 'pointer' } : undefined}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-800">{trainingName}</span>
+                    <div className="flex items-center gap-2">
+                      {session.status === 'completed' && !isExpanded && (
+                        <>
+                          {session.score != null && (
+                            <span className="text-slate-600">{session.score}/10</span>
+                          )}
+                          <span className="text-green-600 font-bold">{'\u2713'}</span>
+                        </>
                       )}
-                      <span className="text-green-600 font-bold">{'\u2713'}</span>
-                    </>
-                  )}
-                  {session.status === 'skipped' && (
-                    <span className="text-slate-400 text-sm">Skipped</span>
-                  )}
-                  {session.status === 'planned' && (
-                    <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                      Check off
-                    </button>
+                      {session.status === 'skipped' && !isExpanded && (
+                        <span className="text-slate-400 text-sm">Skipped</span>
+                      )}
+                      {session.status === 'planned' && (
+                        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                          Check off
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {isExpanded && (
+                    <div className="mt-3 space-y-2 border-t pt-3">
+                      <p className="text-sm text-slate-600">
+                        {session.status === 'completed' ? 'Completed' : 'Skipped'}
+                      </p>
+                      {session.status === 'completed' && session.score != null && (
+                        <p className="text-sm text-slate-600">Score: {session.score}/10</p>
+                      )}
+                      {session.notes && (
+                        <p className="text-sm text-slate-600">{session.notes}</p>
+                      )}
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          className="text-sm text-blue-600 font-medium"
+                          onClick={(e) => { e.stopPropagation() }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="text-sm text-red-600 font-medium"
+                          onClick={(e) => { e.stopPropagation(); handleRemove(session.id!) }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
