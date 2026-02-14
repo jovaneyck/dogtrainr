@@ -343,6 +343,99 @@ export function createApp(dataRoot: string = path.join(process.cwd(), 'data')) {
   });
 
   // Sessions API
+  app.get('/api/dogs/:dogId/sessions', (req, res) => {
+    const { dogId } = req.params;
+    const dogPath = path.join(DATA_DIR, `${dogId}.json`);
+
+    if (!fs.existsSync(dogPath)) {
+      return res.status(404).json({ error: 'Dog not found' });
+    }
+
+    const { from, to } = req.query;
+    if (!from || !to) {
+      return res.status(400).json({ error: 'from and to query params are required' });
+    }
+
+    const fromDate = new Date(`${from}T00:00:00`);
+    const toDate = new Date(`${to}T00:00:00`);
+
+    const dog = JSON.parse(fs.readFileSync(dogPath, 'utf-8'));
+
+    // Load persisted sessions for this dog in range
+    const persistedSessions: Record<string, unknown>[] = [];
+    if (fs.existsSync(SESSIONS_DIR)) {
+      const files = fs.readdirSync(SESSIONS_DIR).filter(f => f.endsWith('.json'));
+      for (const f of files) {
+        const session = JSON.parse(fs.readFileSync(path.join(SESSIONS_DIR, f), 'utf-8'));
+        if (session.dogId !== dogId) continue;
+        const sessionDate = new Date(`${session.date}T00:00:00`);
+        if (sessionDate >= fromDate && sessionDate <= toDate) {
+          persistedSessions.push(session);
+        }
+      }
+    }
+
+    // Build a lookup of persisted sessions by date+trainingId
+    const persistedKey = (date: string, tId: string) => `${date}:${tId}`;
+    const persistedMap = new Map<string, Record<string, unknown>>();
+    for (const s of persistedSessions) {
+      persistedMap.set(persistedKey(s.date as string, s.trainingId as string), s);
+    }
+
+    const sessions: Record<string, unknown>[] = [];
+    const usedPersistedKeys = new Set<string>();
+
+    // Generate computed planned sessions if dog has a plan
+    if (dog.planId) {
+      const planPath = path.join(PLANS_DIR, `${dog.planId}.json`);
+      if (fs.existsSync(planPath)) {
+        const plan = JSON.parse(fs.readFileSync(planPath, 'utf-8'));
+        const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+        const current = new Date(fromDate);
+        while (current <= toDate) {
+          const dayName = weekdays[current.getDay()];
+          const yyyy = current.getFullYear();
+          const mm = String(current.getMonth() + 1).padStart(2, '0');
+          const dd = String(current.getDate()).padStart(2, '0');
+          const dateStr = `${yyyy}-${mm}-${dd}`;
+          const scheduledTrainings: string[] = plan.schedule[dayName] || [];
+
+          for (const tid of scheduledTrainings) {
+            const key = persistedKey(dateStr, tid);
+            if (persistedMap.has(key)) {
+              sessions.push(persistedMap.get(key)!);
+              usedPersistedKeys.add(key);
+            } else {
+              sessions.push({
+                dogId,
+                trainingId: tid,
+                planId: dog.planId,
+                date: dateStr,
+                status: 'planned'
+              });
+            }
+          }
+
+          current.setDate(current.getDate() + 1);
+        }
+      }
+    }
+
+    // Add any persisted sessions not already included (ad-hoc sessions)
+    for (const s of persistedSessions) {
+      const key = persistedKey(s.date as string, s.trainingId as string);
+      if (!usedPersistedKeys.has(key)) {
+        sessions.push(s);
+      }
+    }
+
+    // Sort by date
+    sessions.sort((a, b) => (a.date as string).localeCompare(b.date as string));
+
+    res.json(sessions);
+  });
+
   app.post('/api/dogs/:dogId/sessions', (req, res) => {
     const { dogId } = req.params;
     const dogPath = path.join(DATA_DIR, `${dogId}.json`);
