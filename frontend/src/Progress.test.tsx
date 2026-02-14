@@ -577,6 +577,32 @@ describe('Progress', () => {
     })
   })
 
+  it('Today button navigates back to current date after browsing another week', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    mockFetch({})
+    renderProgress()
+
+    await waitFor(() => {
+      expect(screen.getByText('February 2026')).toBeInTheDocument()
+    })
+
+    // Navigate to next week
+    await user.click(screen.getByRole('button', { name: /next week/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('16')).toBeInTheDocument()
+    })
+
+    // Click "Today" button
+    await user.click(screen.getByRole('button', { name: /today/i }))
+
+    await waitFor(() => {
+      // Should be back on the week containing Feb 14 (today), with Sat 14 selected
+      const satButton = screen.getByRole('button', { name: /Sat 14/ })
+      expect(satButton).toHaveClass('bg-blue-600')
+    })
+  })
+
   it('shows dot markers under days with completed or skipped sessions', async () => {
     mockFetch({
       '2026-02-12': [
