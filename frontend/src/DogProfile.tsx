@@ -126,6 +126,12 @@ function DogProfile() {
         {assignedPlan ? (
           <div className="space-y-4">
             <p className="text-base text-slate-800 font-medium">{assignedPlan.name}</p>
+            <Link
+              to={`/dogs/${id}/progress`}
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+            >
+              Progress
+            </Link>
             <TrainingPlanSchedule schedule={assignedPlan.schedule} trainings={trainings} />
             <button
               onClick={handleUnassign}

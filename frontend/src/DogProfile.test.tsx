@@ -211,4 +211,75 @@ describe('DogProfile', () => {
     // Assign button should now be visible (plan selector mode)
     expect(screen.getByRole('button', { name: /assign/i })).toBeInTheDocument()
   })
+
+  it('shows Progress link when dog has an assigned plan', async () => {
+    const plan = {
+      id: 'plan-1',
+      name: 'Puppy Basics',
+      schedule: { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
+    }
+    const dog = { id: '123', name: 'Buddy', picture: 'buddy.jpg', planId: 'plan-1' }
+
+    vi.spyOn(global, 'fetch').mockImplementation((url) => {
+      if (url === '/api/dogs/123') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(dog) } as Response)
+      }
+      if (url === '/api/plans') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([plan]) } as Response)
+      }
+      if (url === '/api/plans/plan-1') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(plan) } as Response)
+      }
+      if (url === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      }
+      return Promise.reject(new Error('Unknown URL'))
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/dogs/123']}>
+        <Routes>
+          <Route path="/dogs/:id" element={<DogProfile />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Puppy Basics')).toBeInTheDocument()
+    })
+
+    const progressLink = screen.getByRole('link', { name: /progress/i })
+    expect(progressLink).toHaveAttribute('href', '/dogs/123/progress')
+  })
+
+  it('does not show Progress link when dog has no assigned plan', async () => {
+    const dog = { id: '123', name: 'Buddy', picture: 'buddy.jpg' }
+
+    vi.spyOn(global, 'fetch').mockImplementation((url) => {
+      if (url === '/api/dogs/123') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(dog) } as Response)
+      }
+      if (url === '/api/plans') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      }
+      if (url === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      }
+      return Promise.reject(new Error('Unknown URL'))
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/dogs/123']}>
+        <Routes>
+          <Route path="/dogs/:id" element={<DogProfile />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Buddy')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByRole('link', { name: /progress/i })).not.toBeInTheDocument()
+  })
 })
