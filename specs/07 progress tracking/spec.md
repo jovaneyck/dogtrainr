@@ -1,0 +1,5 @@
+So the next feature I want to add is tracking progress. So whenever I go to my uh dogs and I look at the the plan, uh I want to see the current week. So I want to have like a calendar view and the plan that the dog is assigned to. I want to see it um in like a calendar view uh with the specific days, not only like the weekday, but also the the full date like uh 14th of February 2026.
+
+And I want to be able to like check off a training that uh whether or not I did uh do it. And I also want to be able to add notes for each and every individual training run so I can uh track progress. I want to uh add notes and also like a score, like uh it was a 10 out of 10 perfect session, or it was a four out of ten, so we can do like uh some graphs and some analytics later.
+
+Spawn a subagent to search for the best react "calendar" component that matches our current needs
