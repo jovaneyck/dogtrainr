@@ -331,6 +331,252 @@ describe('Progress', () => {
     })
   })
 
+  it('check off button opens bottom sheet', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    mockFetch({
+      '2026-02-14': [
+        { dogId: DOG_ID, trainingId: 't1', date: '2026-02-14', status: 'planned' },
+      ],
+    })
+    renderProgress()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /check off/i })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: /check off/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('2026-02-14')).toBeInTheDocument()
+      expect(screen.getByLabelText('Completed')).toBeChecked()
+      expect(screen.getByLabelText('Skipped')).not.toBeChecked()
+      expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument()
+    })
+  })
+
+  it('score selector only visible when Completed', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    mockFetch({
+      '2026-02-14': [
+        { dogId: DOG_ID, trainingId: 't1', date: '2026-02-14', status: 'planned' },
+      ],
+    })
+    renderProgress()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /check off/i })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: /check off/i }))
+
+    // Score buttons should be visible (default is Completed)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '5' })).toBeInTheDocument()
+    })
+
+    // Switch to Skipped
+    await user.click(screen.getByLabelText('Skipped'))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: '5' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('save creates new session via POST', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    mockFetch({
+      '2026-02-14': [
+        { dogId: DOG_ID, trainingId: 't1', planId: 'plan-1', date: '2026-02-14', status: 'planned' },
+      ],
+    })
+    renderProgress()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /check off/i })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: /check off/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument()
+    })
+
+    // Select score 7
+    await user.click(screen.getByRole('button', { name: '7' }))
+
+    // Type notes
+    await user.type(screen.getByRole('textbox'), 'Great session')
+
+    // Override fetch to handle POST
+    vi.mocked(global.fetch).mockImplementation((url, init) => {
+      const urlStr = String(url)
+      const method = init && typeof init === 'object' && 'method' in init ? (init as { method: string }).method : 'GET'
+      if (method === 'POST' && urlStr.includes(`/api/dogs/${DOG_ID}/sessions`)) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
+      }
+      if (urlStr === `/api/dogs/${DOG_ID}`) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(DOG) } as Response)
+      }
+      if (urlStr === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(TRAININGS) } as Response)
+      }
+      if (urlStr.includes(`/api/dogs/${DOG_ID}/sessions`)) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      }
+      return Promise.reject(new Error(`Unmocked URL: ${urlStr}`))
+    })
+
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => {
+      const postCalls = vi.mocked(global.fetch).mock.calls.filter(
+        c => c[1] && typeof c[1] === 'object' && 'method' in c[1] && (c[1] as { method: string }).method === 'POST'
+      )
+      expect(postCalls).toHaveLength(1)
+      const body = JSON.parse((postCalls[0][1] as { body: string }).body)
+      expect(body.status).toBe('completed')
+      expect(body.score).toBe(7)
+      expect(body.notes).toBe('Great session')
+      expect(body.trainingId).toBe('t1')
+      expect(body.date).toBe('2026-02-14')
+      expect(body.planId).toBe('plan-1')
+    })
+  })
+
+  it('edit button opens sheet with pre-filled data', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    mockFetch({
+      '2026-02-14': [
+        { id: 's1', dogId: DOG_ID, trainingId: 't1', date: '2026-02-14', status: 'completed', score: 8, notes: 'Well done' },
+      ],
+    })
+    renderProgress()
+
+    await waitFor(() => {
+      expect(screen.getByText('Sit')).toBeInTheDocument()
+    })
+
+    // Expand
+    await user.click(screen.getByText('Sit'))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument()
+    })
+
+    // Click Edit
+    await user.click(screen.getByRole('button', { name: /edit/i }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Completed')).toBeChecked()
+      // Score 8 should be selected
+      const btn8 = screen.getByRole('button', { name: '8' })
+      expect(btn8).toHaveClass('bg-blue-600')
+      expect(screen.getByRole('textbox')).toHaveValue('Well done')
+    })
+  })
+
+  it('save on edit updates via PUT', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    mockFetch({
+      '2026-02-14': [
+        { id: 's1', dogId: DOG_ID, trainingId: 't1', date: '2026-02-14', status: 'completed', score: 8, notes: 'Well done' },
+      ],
+    })
+    renderProgress()
+
+    await waitFor(() => {
+      expect(screen.getByText('Sit')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Sit'))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: /edit/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument()
+    })
+
+    // Override fetch for PUT
+    vi.mocked(global.fetch).mockImplementation((url, init) => {
+      const urlStr = String(url)
+      const method = init && typeof init === 'object' && 'method' in init ? (init as { method: string }).method : 'GET'
+      if (method === 'PUT' && urlStr.includes(`/api/dogs/${DOG_ID}/sessions/s1`)) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
+      }
+      if (urlStr === `/api/dogs/${DOG_ID}`) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(DOG) } as Response)
+      }
+      if (urlStr === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(TRAININGS) } as Response)
+      }
+      if (urlStr.includes(`/api/dogs/${DOG_ID}/sessions`)) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      }
+      return Promise.reject(new Error(`Unmocked URL: ${urlStr}`))
+    })
+
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => {
+      const putCalls = vi.mocked(global.fetch).mock.calls.filter(
+        c => c[1] && typeof c[1] === 'object' && 'method' in c[1] && (c[1] as { method: string }).method === 'PUT'
+      )
+      expect(putCalls).toHaveLength(1)
+      expect(String(putCalls[0][0])).toContain(`/api/dogs/${DOG_ID}/sessions/s1`)
+      const body = JSON.parse((putCalls[0][1] as { body: string }).body)
+      expect(body.status).toBe('completed')
+      expect(body.score).toBe(8)
+    })
+  })
+
+  it('sheet closes on save', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    mockFetch({
+      '2026-02-14': [
+        { dogId: DOG_ID, trainingId: 't1', date: '2026-02-14', status: 'planned' },
+      ],
+    })
+    renderProgress()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /check off/i })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: /check off/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument()
+    })
+
+    // Override fetch for POST
+    vi.mocked(global.fetch).mockImplementation((url, init) => {
+      const urlStr = String(url)
+      const method = init && typeof init === 'object' && 'method' in init ? (init as { method: string }).method : 'GET'
+      if (method === 'POST' && urlStr.includes(`/api/dogs/${DOG_ID}/sessions`)) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
+      }
+      if (urlStr === `/api/dogs/${DOG_ID}`) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(DOG) } as Response)
+      }
+      if (urlStr === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(TRAININGS) } as Response)
+      }
+      if (urlStr.includes(`/api/dogs/${DOG_ID}/sessions`)) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      }
+      return Promise.reject(new Error(`Unmocked URL: ${urlStr}`))
+    })
+
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => {
+      // Sheet should be gone - no Save button
+      expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument()
+    })
+  })
+
   it('shows dot markers under days with completed or skipped sessions', async () => {
     mockFetch({
       '2026-02-12': [

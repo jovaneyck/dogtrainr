@@ -71,6 +71,13 @@ function Progress() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [loading, setLoading] = useState(true)
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
+  const [sheetSession, setSheetSession] = useState<{
+    session: Session
+    trainingName: string
+  } | null>(null)
+  const [sheetStatus, setSheetStatus] = useState<'completed' | 'skipped'>('completed')
+  const [sheetScore, setSheetScore] = useState<number | null>(null)
+  const [sheetNotes, setSheetNotes] = useState('')
 
   const weekDays = getWeekDays(weekStart)
 
@@ -108,6 +115,48 @@ function Progress() {
     }
   }
 
+  const trainingMap = new Map(trainings.map(t => [t.id, t.name]))
+
+  const openSheet = (session: Session) => {
+    const trainingName = trainingMap.get(session.trainingId) ?? session.trainingId
+    setSheetSession({ session, trainingName })
+    setSheetStatus(session.status === 'planned' ? 'completed' : session.status as 'completed' | 'skipped')
+    setSheetScore(session.score ?? null)
+    setSheetNotes(session.notes ?? '')
+  }
+
+  const handleSave = async () => {
+    if (!sheetSession) return
+    const { session } = sheetSession
+    const body: Record<string, unknown> = {
+      status: sheetStatus,
+    }
+    if (sheetStatus === 'completed' && sheetScore != null) {
+      body.score = sheetScore
+    }
+    if (sheetNotes) body.notes = sheetNotes
+
+    if (session.id) {
+      await fetch(`/api/dogs/${dogId}/sessions/${session.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    } else {
+      body.trainingId = session.trainingId
+      body.date = session.date
+      if (session.planId) body.planId = session.planId
+      await fetch(`/api/dogs/${dogId}/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    }
+    setSheetSession(null)
+    setExpandedSessionId(null)
+    await fetchSessions(weekStart)
+  }
+
   const navigateWeek = (direction: number) => {
     setWeekStart(prev => {
       const next = new Date(prev)
@@ -118,8 +167,6 @@ function Progress() {
 
   const selectedDateStr = formatDate(selectedDate)
   const daySessions = sessions.filter(s => s.date === selectedDateStr)
-
-  const trainingMap = new Map(trainings.map(t => [t.id, t.name]))
 
   const headerMonth = MONTH_NAMES[weekStart.getMonth()]
   const headerYear = weekStart.getFullYear()
@@ -219,7 +266,8 @@ function Progress() {
                         <span className="text-slate-400 text-sm">Skipped</span>
                       )}
                       {session.status === 'planned' && (
-                        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                          onClick={(e) => { e.stopPropagation(); openSheet(session) }}>
                           Check off
                         </button>
                       )}
@@ -239,7 +287,7 @@ function Progress() {
                       <div className="flex gap-2 pt-1">
                         <button
                           className="text-sm text-blue-600 font-medium"
-                          onClick={(e) => { e.stopPropagation() }}
+                          onClick={(e) => { e.stopPropagation(); openSheet(session) }}
                         >
                           Edit
                         </button>
@@ -258,6 +306,57 @@ function Progress() {
           </div>
         )}
       </div>
+
+      {sheetSession && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setSheetSession(null)}>
+          <div className="fixed inset-0 bg-black/30" />
+          <div className="relative bg-white rounded-t-2xl w-full max-w-lg p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-slate-800">
+              {sheetSession.trainingName}
+            </h3>
+            <p className="text-sm text-slate-500">{sheetSession.session.date}</p>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Status</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="status" value="completed" checked={sheetStatus === 'completed'} onChange={() => setSheetStatus('completed')} />
+                  Completed
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="status" value="skipped" checked={sheetStatus === 'skipped'} onChange={() => setSheetStatus('skipped')} />
+                  Skipped
+                </label>
+              </div>
+            </div>
+
+            {sheetStatus === 'completed' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Score</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                    <button key={n} onClick={() => setSheetScore(sheetScore === n ? null : n)}
+                      className={`py-2 rounded-lg text-sm font-medium ${sheetScore === n ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Notes</label>
+              <textarea value={sheetNotes} onChange={e => setSheetNotes(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" rows={3} />
+            </div>
+
+            <button onClick={handleSave}
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700">
+              Save
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
