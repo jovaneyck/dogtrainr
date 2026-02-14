@@ -7,14 +7,16 @@ describe('App', () => {
     vi.resetAllMocks()
   })
 
-  it('renders the title', () => {
+  it('renders the title', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([])
     } as Response)
 
     render(<App />)
-    expect(screen.getByText('DogTrainr')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('DogTrainr')).toBeInTheDocument()
+    })
   })
 
   it('renders dog list on home route', async () => {
@@ -30,24 +32,28 @@ describe('App', () => {
     })
   })
 
-  it('logo links to homepage', () => {
+  it('logo links to homepage', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([])
     } as Response)
 
     render(<App />)
-    const logoLink = screen.getByRole('link', { name: /dogtrainr/i })
-    expect(logoLink).toHaveAttribute('href', '/')
+    await waitFor(() => {
+      const logoLink = screen.getByRole('link', { name: /dogtrainr/i })
+      expect(logoLink).toHaveAttribute('href', '/')
+    })
   })
 
-  it('renders plans navigation link', () => {
+  it('renders plans navigation link', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([])
     } as Response)
 
     render(<App />)
-    expect(screen.getByRole('link', { name: /plans/i })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /plans/i })).toBeInTheDocument()
+    })
   })
 })
