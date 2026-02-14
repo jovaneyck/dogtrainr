@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import MDEditor from '@uiw/react-md-editor'
+import rehypeSanitize from 'rehype-sanitize'
 
 interface Training {
   id: string
@@ -64,7 +65,7 @@ function TrainingDetail() {
       </div>
       <div className="bg-white rounded-2xl shadow-sm p-6 space-y-2">
         <h3 className="text-lg font-semibold text-slate-700">Procedure</h3>
-        <MDEditor.Markdown source={training.procedure} components={{
+        <MDEditor.Markdown source={training.procedure} rehypePlugins={[rehypeSanitize]} components={{
           a: ({ href, children, ...props }) => {
             const url = href && !/^https?:\/\//.test(href) ? `https://${href}` : href
             return <a href={url} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
@@ -73,7 +74,7 @@ function TrainingDetail() {
       </div>
       <div className="bg-white rounded-2xl shadow-sm p-6 space-y-2">
         <h3 className="text-lg font-semibold text-slate-700">Tips</h3>
-        <MDEditor.Markdown source={training.tips} components={{
+        <MDEditor.Markdown source={training.tips} rehypePlugins={[rehypeSanitize]} components={{
           a: ({ href, children, ...props }) => {
             const url = href && !/^https?:\/\//.test(href) ? `https://${href}` : href
             return <a href={url} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
