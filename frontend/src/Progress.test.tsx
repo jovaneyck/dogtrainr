@@ -354,6 +354,29 @@ describe('Progress', () => {
     })
   })
 
+  it('modal is vertically centered on screen', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    mockFetch({
+      '2026-02-14': [
+        { dogId: DOG_ID, trainingId: 't1', date: '2026-02-14', status: 'planned' },
+      ],
+    })
+    renderProgress()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /check off/i })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: /check off/i }))
+
+    await waitFor(() => {
+      const saveButton = screen.getByRole('button', { name: /save/i })
+      const overlay = saveButton.closest('.fixed.inset-0.z-50')
+      expect(overlay).toHaveClass('items-center')
+      expect(overlay).not.toHaveClass('items-end')
+    })
+  })
+
   it('score selector only visible when Completed', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     mockFetch({

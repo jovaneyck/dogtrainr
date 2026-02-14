@@ -308,9 +308,9 @@ function Progress() {
       </div>
 
       {sheetSession && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setSheetSession(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setSheetSession(null)}>
           <div className="fixed inset-0 bg-black/30" />
-          <div className="relative bg-white rounded-t-2xl w-full max-w-lg p-6 space-y-4" onClick={e => e.stopPropagation()}>
+          <div className="relative bg-white rounded-2xl w-full max-w-lg mx-4 p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-slate-800">
               {sheetSession.trainingName}
             </h3>
