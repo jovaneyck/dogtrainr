@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import Progress from './Progress'
@@ -392,16 +392,16 @@ describe('Progress', () => {
 
     await user.click(screen.getByRole('button', { name: /check off/i }))
 
-    // Score buttons should be visible (default is Completed)
+    // Score slider should be visible (default is Completed)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '5' })).toBeInTheDocument()
+      expect(screen.getByRole('slider', { name: /score/i })).toBeInTheDocument()
     })
 
     // Switch to Skipped
     await user.click(screen.getByLabelText('Skipped'))
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: '5' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('slider', { name: /score/i })).not.toBeInTheDocument()
     })
   })
 
@@ -424,8 +424,9 @@ describe('Progress', () => {
       expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument()
     })
 
-    // Select score 7
-    await user.click(screen.getByRole('button', { name: '7' }))
+    // Set score to 7 via slider
+    const slider = screen.getByRole('slider', { name: /score/i })
+    await fireEvent.change(slider, { target: { value: '7' } })
 
     // Type notes
     await user.type(screen.getByRole('textbox'), 'Great session')
@@ -490,9 +491,10 @@ describe('Progress', () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText('Completed')).toBeChecked()
-      // Score 8 should be selected
-      const btn8 = screen.getByRole('button', { name: '8' })
-      expect(btn8).toHaveClass('bg-blue-600')
+      // Score 8 should be shown on the slider
+      const slider = screen.getByRole('slider', { name: /score/i })
+      expect(slider).toHaveValue('8')
+      expect(screen.getByText('8')).toBeInTheDocument()
       expect(screen.getByRole('textbox')).toHaveValue('Well done')
     })
   })
