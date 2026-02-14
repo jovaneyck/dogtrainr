@@ -80,8 +80,20 @@ describe('Trainings API', () => {
     });
 
     it('returns 404 for non-existent training', async () => {
-      const response = await request(app).get('/api/trainings/non-existent-id');
+      const response = await request(app).get('/api/trainings/00000000-0000-0000-0000-000000000000');
       expect(response.status).toBe(404);
+    });
+
+    it('rejects path traversal attempts with 400', async () => {
+      const traversalPayloads = [
+        '..%2F..%2Fetc%2Fpasswd',
+        'not-a-uuid',
+        '00000000-0000-0000-0000-00000000000g', // invalid hex char
+      ];
+      for (const payload of traversalPayloads) {
+        const response = await request(app).get(`/api/trainings/${payload}`);
+        expect(response.status).toBe(400);
+      }
     });
   });
 
@@ -104,7 +116,7 @@ describe('Trainings API', () => {
 
     it('returns 404 for non-existent training', async () => {
       const response = await request(app)
-        .put('/api/trainings/non-existent-id')
+        .put('/api/trainings/00000000-0000-0000-0000-000000000000')
         .send({ name: 'Test' });
       expect(response.status).toBe(404);
     });
@@ -127,7 +139,7 @@ describe('Trainings API', () => {
     });
 
     it('returns 404 when deleting non-existent training', async () => {
-      const response = await request(app).delete('/api/trainings/non-existent-id');
+      const response = await request(app).delete('/api/trainings/00000000-0000-0000-0000-000000000000');
       expect(response.status).toBe(404);
     });
   });
@@ -153,7 +165,7 @@ describe('Trainings API', () => {
     it('returns 404 for non-existent training', async () => {
       const testImageBuffer = Buffer.from('fake-image-data');
       const response = await request(app)
-        .post('/api/trainings/non-existent-id/images')
+        .post('/api/trainings/00000000-0000-0000-0000-000000000000/images')
         .attach('image', testImageBuffer, 'test.jpg');
 
       expect(response.status).toBe(404);

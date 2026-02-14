@@ -68,8 +68,32 @@ describe('Dogs API', () => {
     });
 
     it('returns 404 for non-existent dog', async () => {
-      const response = await request(app).get('/api/dogs/non-existent-id');
+      const response = await request(app).get('/api/dogs/00000000-0000-0000-0000-000000000000');
       expect(response.status).toBe(404);
+    });
+
+    it('rejects path traversal attempts with 400', async () => {
+      const traversalPayloads = [
+        '..%2F..%2Fetc%2Fpasswd',
+        'not-a-uuid',
+        '00000000-0000-0000-0000-00000000000g', // invalid hex char
+      ];
+      for (const payload of traversalPayloads) {
+        const response = await request(app).get(`/api/dogs/${payload}`);
+        expect(response.status).toBe(400);
+      }
+    });
+
+    it('rejects path traversal on DELETE', async () => {
+      const response = await request(app).delete('/api/dogs/..%2F..%2Fetc%2Fpasswd');
+      expect(response.status).toBe(400);
+    });
+
+    it('rejects path traversal on PUT plan', async () => {
+      const response = await request(app)
+        .put('/api/dogs/..%2F..%2Fetc%2Fpasswd/plan')
+        .send({ planId: 'plan-123' });
+      expect(response.status).toBe(400);
     });
   });
 
@@ -92,7 +116,7 @@ describe('Dogs API', () => {
     });
 
     it('returns 404 when deleting non-existent dog', async () => {
-      const response = await request(app).delete('/api/dogs/non-existent-id');
+      const response = await request(app).delete('/api/dogs/00000000-0000-0000-0000-000000000000');
       expect(response.status).toBe(404);
     });
   });
@@ -121,7 +145,7 @@ describe('Dogs API', () => {
 
     it('returns 404 for non-existent dog', async () => {
       const response = await request(app)
-        .put('/api/dogs/non-existent-id/plan')
+        .put('/api/dogs/00000000-0000-0000-0000-000000000000/plan')
         .send({ planId: 'plan-123' });
       expect(response.status).toBe(404);
     });
@@ -154,7 +178,7 @@ describe('Dogs API', () => {
     });
 
     it('returns 404 for non-existent dog', async () => {
-      const response = await request(app).delete('/api/dogs/non-existent-id/plan');
+      const response = await request(app).delete('/api/dogs/00000000-0000-0000-0000-000000000000/plan');
       expect(response.status).toBe(404);
     });
   });

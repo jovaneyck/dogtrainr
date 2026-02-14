@@ -46,6 +46,15 @@ export function createApp(dataRoot: string = path.join(process.cwd(), 'data')) {
   app.use('/uploads/dogs', express.static(DATA_DIR));
   app.use('/uploads/trainings', express.static(TRAININGS_DIR));
 
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  app.param('id', (req, res, next, id) => {
+    if (!UUID_RE.test(id)) {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
+    next();
+  });
+
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', message: 'Hello from DogTrainr API!' });
   });
