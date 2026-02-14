@@ -45,7 +45,8 @@ function PlanList() {
         <h2 className="text-2xl font-bold text-slate-800">Training Plans</h2>
         <Link
           to="/plans/new"
-          className="bg-blue-600 text-white w-10 h-10 rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center justify-center text-xl"
+          className="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold hover:bg-blue-700 transition-colors"
+          aria-label="Add plan"
         >
           +
         </Link>
