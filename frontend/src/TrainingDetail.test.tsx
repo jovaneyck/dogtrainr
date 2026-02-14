@@ -92,6 +92,35 @@ describe('TrainingDetail', () => {
     expect(link).toHaveAttribute('target', '_blank')
   })
 
+  it('sanitizes HTML in markdown to prevent XSS', async () => {
+    const training = {
+      id: '1',
+      name: 'Malicious',
+      procedure: '<img src=x onerror="alert(1)">',
+      tips: '<script>alert("xss")</script>'
+    }
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(training)
+    } as Response)
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/trainings/1']}>
+        <Routes>
+          <Route path="/trainings/:id" element={<TrainingDetail />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Malicious')).toBeInTheDocument()
+    })
+
+    // Verify dangerous HTML is sanitized
+    expect(container.querySelector('img[onerror]')).toBeNull()
+    expect(container.querySelector('script')).toBeNull()
+  })
+
   it('shows not found for non-existent training', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,
