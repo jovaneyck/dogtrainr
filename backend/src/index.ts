@@ -10,13 +10,15 @@ export function createApp(dataRoot: string = path.join(process.cwd(), 'data')) {
   const DATA_DIR = path.join(dataRoot, 'dogs');
   const TRAININGS_DIR = path.join(dataRoot, 'trainings');
   const PLANS_DIR = path.join(dataRoot, 'plans');
+  const DOG_UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+  const TRAINING_UPLOADS_DIR = path.join(TRAININGS_DIR, 'uploads');
 
   const dogStorage = multer.diskStorage({
     destination: (_req, _file, cb) => {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
+      if (!fs.existsSync(DOG_UPLOADS_DIR)) {
+        fs.mkdirSync(DOG_UPLOADS_DIR, { recursive: true });
       }
-      cb(null, DATA_DIR);
+      cb(null, DOG_UPLOADS_DIR);
     },
     filename: (_req, file, cb) => {
       const ext = path.extname(file.originalname);
@@ -28,10 +30,10 @@ export function createApp(dataRoot: string = path.join(process.cwd(), 'data')) {
 
   const trainingStorage = multer.diskStorage({
     destination: (_req, _file, cb) => {
-      if (!fs.existsSync(TRAININGS_DIR)) {
-        fs.mkdirSync(TRAININGS_DIR, { recursive: true });
+      if (!fs.existsSync(TRAINING_UPLOADS_DIR)) {
+        fs.mkdirSync(TRAINING_UPLOADS_DIR, { recursive: true });
       }
-      cb(null, TRAININGS_DIR);
+      cb(null, TRAINING_UPLOADS_DIR);
     },
     filename: (_req, file, cb) => {
       const ext = path.extname(file.originalname);
@@ -43,8 +45,8 @@ export function createApp(dataRoot: string = path.join(process.cwd(), 'data')) {
 
   app.use(cors());
   app.use(express.json());
-  app.use('/uploads/dogs', express.static(DATA_DIR));
-  app.use('/uploads/trainings', express.static(TRAININGS_DIR));
+  app.use('/uploads/dogs', express.static(DOG_UPLOADS_DIR));
+  app.use('/uploads/trainings', express.static(TRAINING_UPLOADS_DIR));
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -112,7 +114,7 @@ export function createApp(dataRoot: string = path.join(process.cwd(), 'data')) {
 
     // Read dog data to get picture filename
     const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    const picturePath = path.join(DATA_DIR, data.picture);
+    const picturePath = path.join(DOG_UPLOADS_DIR, data.picture);
 
     // Delete JSON file
     fs.unlinkSync(filePath);
