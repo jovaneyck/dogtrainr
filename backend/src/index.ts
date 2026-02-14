@@ -10,6 +10,7 @@ export function createApp(dataRoot: string = path.join(process.cwd(), 'data')) {
   const DATA_DIR = path.join(dataRoot, 'dogs');
   const TRAININGS_DIR = path.join(dataRoot, 'trainings');
   const PLANS_DIR = path.join(dataRoot, 'plans');
+  const SESSIONS_DIR = path.join(dataRoot, 'sessions');
   const DOG_UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
   const TRAINING_UPLOADS_DIR = path.join(TRAININGS_DIR, 'uploads');
 
@@ -52,6 +53,13 @@ export function createApp(dataRoot: string = path.join(process.cwd(), 'data')) {
 
   app.param('id', (req, res, next, id) => {
     if (!UUID_RE.test(id)) {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
+    next();
+  });
+
+  app.param('dogId', (req, res, next, dogId) => {
+    if (!UUID_RE.test(dogId)) {
       return res.status(400).json({ error: 'Invalid ID format' });
     }
     next();
@@ -328,6 +336,115 @@ export function createApp(dataRoot: string = path.join(process.cwd(), 'data')) {
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Plan not found' });
+    }
+
+    fs.unlinkSync(filePath);
+    res.status(204).send();
+  });
+
+  // Sessions API
+  app.post('/api/dogs/:dogId/sessions', (req, res) => {
+    const { dogId } = req.params;
+    const dogPath = path.join(DATA_DIR, `${dogId}.json`);
+
+    if (!fs.existsSync(dogPath)) {
+      return res.status(404).json({ error: 'Dog not found' });
+    }
+
+    const { trainingId, planId, date, status, score, notes } = req.body;
+
+    if (!trainingId || !date || !status) {
+      return res.status(400).json({ error: 'trainingId, date, and status are required' });
+    }
+
+    if (status !== 'completed' && status !== 'skipped') {
+      return res.status(400).json({ error: 'Status must be "completed" or "skipped"' });
+    }
+
+    if (score !== undefined && status === 'skipped') {
+      return res.status(400).json({ error: 'Score is only allowed when status is completed' });
+    }
+
+    if (score !== undefined && (score < 1 || score > 10)) {
+      return res.status(400).json({ error: 'Score must be between 1 and 10' });
+    }
+
+    if (!fs.existsSync(SESSIONS_DIR)) {
+      fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+    }
+
+    const id = crypto.randomUUID();
+    const session: Record<string, unknown> = { id, dogId, trainingId, date, status };
+    if (planId !== undefined) session.planId = planId;
+    if (score !== undefined) session.score = score;
+    if (notes !== undefined) session.notes = notes;
+
+    fs.writeFileSync(path.join(SESSIONS_DIR, `${id}.json`), JSON.stringify(session, null, 2));
+    res.status(201).json(session);
+  });
+
+  app.get('/api/dogs/:dogId/sessions/:id', (req, res) => {
+    const { dogId, id } = req.params;
+    const filePath = path.join(SESSIONS_DIR, `${id}.json`);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const session = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    if (session.dogId !== dogId) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    res.json(session);
+  });
+
+  app.put('/api/dogs/:dogId/sessions/:id', (req, res) => {
+    const { dogId, id } = req.params;
+    const filePath = path.join(SESSIONS_DIR, `${id}.json`);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const existing = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    if (existing.dogId !== dogId) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const { status, score, notes } = req.body;
+    const updatedStatus = status ?? existing.status;
+
+    if (score !== undefined && updatedStatus === 'skipped') {
+      return res.status(400).json({ error: 'Score is only allowed when status is completed' });
+    }
+
+    if (score !== undefined && (score < 1 || score > 10)) {
+      return res.status(400).json({ error: 'Score must be between 1 and 10' });
+    }
+
+    const updated = {
+      ...existing,
+      status: updatedStatus,
+      score: score ?? existing.score,
+      notes: notes ?? existing.notes
+    };
+
+    fs.writeFileSync(filePath, JSON.stringify(updated, null, 2));
+    res.json(updated);
+  });
+
+  app.delete('/api/dogs/:dogId/sessions/:id', (req, res) => {
+    const { dogId, id } = req.params;
+    const filePath = path.join(SESSIONS_DIR, `${id}.json`);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const session = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    if (session.dogId !== dogId) {
+      return res.status(404).json({ error: 'Session not found' });
     }
 
     fs.unlinkSync(filePath);
