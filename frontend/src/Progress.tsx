@@ -165,6 +165,14 @@ function Progress() {
     })
   }
 
+  const navigateToday = () => {
+    const today = new Date()
+    setSelectedDate(today)
+    setWeekStart(getMonday(today))
+  }
+
+  const isCurrentWeek = formatDate(weekStart) === formatDate(getMonday(new Date()))
+
   const selectedDateStr = formatDate(selectedDate)
   const daySessions = sessions.filter(s => s.date === selectedDateStr)
 
@@ -190,7 +198,17 @@ function Progress() {
           >
             &lt;
           </button>
-          <span className="font-semibold text-slate-800">{headerMonth} {headerYear}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-slate-800">{headerMonth} {headerYear}</span>
+            {!isCurrentWeek && (
+              <button
+                onClick={navigateToday}
+                className="text-sm text-blue-600 font-medium hover:text-blue-800"
+              >
+                Today
+              </button>
+            )}
+          </div>
           <button
             onClick={() => navigateWeek(1)}
             aria-label="next week"
