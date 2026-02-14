@@ -206,4 +206,20 @@ describe('Dogs API', () => {
       expect(imageResponse.body.toString()).toBe('fake-image-data');
     });
   });
+
+  describe('data exposure prevention', () => {
+    it('does not expose JSON data files via static route', async () => {
+      const testImageBuffer = Buffer.from('fake-image-data');
+      const createResponse = await request(app)
+        .post('/api/dogs')
+        .field('name', 'Buddy')
+        .attach('picture', testImageBuffer, 'buddy.jpg');
+
+      const dogId = createResponse.body.id;
+
+      // JSON data file should NOT be accessible via the uploads route
+      const response = await request(app).get(`/uploads/dogs/${dogId}.json`);
+      expect(response.status).toBe(404);
+    });
+  });
 });
