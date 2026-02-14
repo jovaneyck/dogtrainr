@@ -89,8 +89,20 @@ describe('Plans API', () => {
     });
 
     it('returns 404 for non-existent plan', async () => {
-      const response = await request(app).get('/api/plans/non-existent-id');
+      const response = await request(app).get('/api/plans/00000000-0000-0000-0000-000000000000');
       expect(response.status).toBe(404);
+    });
+
+    it('rejects path traversal attempts with 400', async () => {
+      const traversalPayloads = [
+        '..%2F..%2Fetc%2Fpasswd',
+        'not-a-uuid',
+        '00000000-0000-0000-0000-00000000000g', // invalid hex char
+      ];
+      for (const payload of traversalPayloads) {
+        const response = await request(app).get(`/api/plans/${payload}`);
+        expect(response.status).toBe(400);
+      }
     });
   });
 
@@ -119,7 +131,7 @@ describe('Plans API', () => {
 
     it('returns 404 for non-existent plan', async () => {
       const response = await request(app)
-        .put('/api/plans/non-existent-id')
+        .put('/api/plans/00000000-0000-0000-0000-000000000000')
         .send({ name: 'Test' });
       expect(response.status).toBe(404);
     });
@@ -145,7 +157,7 @@ describe('Plans API', () => {
     });
 
     it('returns 404 when deleting non-existent plan', async () => {
-      const response = await request(app).delete('/api/plans/non-existent-id');
+      const response = await request(app).delete('/api/plans/00000000-0000-0000-0000-000000000000');
       expect(response.status).toBe(404);
     });
   });
