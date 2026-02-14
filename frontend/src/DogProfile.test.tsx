@@ -1,23 +1,45 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import DogProfile from './DogProfile'
 
+const DOG_ID = '123'
+
+function mockSessionsEndpoint(sessions: Record<string, unknown[]> = {}) {
+  return (url: string) => {
+    const parsed = new URL(url, 'http://localhost')
+    const from = parsed.searchParams.get('from')!
+    const to = parsed.searchParams.get('to')!
+    const result: unknown[] = []
+    for (const [date, items] of Object.entries(sessions)) {
+      if (date >= from && date <= to) {
+        result.push(...items)
+      }
+    }
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(result) } as Response)
+  }
+}
+
 describe('DogProfile', () => {
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-02-14T12:00:00'))
     vi.resetAllMocks()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('displays dog details', async () => {
-    const dog = { id: '123', name: 'Buddy', picture: 'buddy.jpg' }
-    const plans: unknown[] = []
+    const dog = { id: DOG_ID, name: 'Buddy', picture: 'buddy.jpg' }
     vi.spyOn(global, 'fetch').mockImplementation((url) => {
-      if (url === '/api/dogs/123') {
+      if (url === `/api/dogs/${DOG_ID}`) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(dog) } as Response)
       }
       if (url === '/api/plans') {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(plans) } as Response)
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
       }
       if (url === '/api/trainings') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
@@ -26,7 +48,7 @@ describe('DogProfile', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/dogs/123']}>
+      <MemoryRouter initialEntries={[`/dogs/${DOG_ID}`]}>
         <Routes>
           <Route path="/dogs/:id" element={<DogProfile />} />
         </Routes>
@@ -66,41 +88,90 @@ describe('DogProfile', () => {
     })
   })
 
-  it('shows assigned training plan details', async () => {
+  it('shows inline progress view when dog has a plan', async () => {
     const plan = {
       id: 'plan-1',
       name: 'Puppy Basics',
-      schedule: {
-        monday: ['training-1'],
-        tuesday: [],
-        wednesday: [],
-        thursday: [],
-        friday: [],
-        saturday: [],
-        sunday: []
-      }
+      schedule: { monday: ['t1'], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
     }
-    const dog = { id: '123', name: 'Buddy', picture: 'buddy.jpg', planId: 'plan-1' }
-    const plans = [plan]
+    const dog = { id: DOG_ID, name: 'Buddy', picture: 'buddy.jpg', planId: 'plan-1' }
+    const handleSessions = mockSessionsEndpoint({
+      '2026-02-14': [
+        { dogId: DOG_ID, trainingId: 't1', date: '2026-02-14', status: 'planned' },
+      ],
+    })
 
     vi.spyOn(global, 'fetch').mockImplementation((url) => {
-      if (url === '/api/dogs/123') {
+      const urlStr = String(url)
+      if (urlStr === `/api/dogs/${DOG_ID}`) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(dog) } as Response)
       }
-      if (url === '/api/plans') {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(plans) } as Response)
+      if (urlStr === '/api/plans') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([plan]) } as Response)
       }
-      if (url === '/api/plans/plan-1') {
+      if (urlStr === `/api/plans/plan-1`) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(plan) } as Response)
       }
-      if (url === '/api/trainings') {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      if (urlStr === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: 't1', name: 'Sit' }]) } as Response)
       }
-      return Promise.reject(new Error('Unknown URL'))
+      if (urlStr.includes(`/api/dogs/${DOG_ID}/sessions`)) {
+        return handleSessions(urlStr)
+      }
+      return Promise.reject(new Error(`Unknown URL: ${urlStr}`))
     })
 
     render(
-      <MemoryRouter initialEntries={['/dogs/123']}>
+      <MemoryRouter initialEntries={[`/dogs/${DOG_ID}`]}>
+        <Routes>
+          <Route path="/dogs/:id" element={<DogProfile />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    // Progress view should be inlined - week strip with day names
+    await waitFor(() => {
+      expect(screen.getByText('Mon')).toBeInTheDocument()
+      expect(screen.getByText('Sat')).toBeInTheDocument()
+    })
+
+    // Session from the progress view should appear
+    await waitFor(() => {
+      expect(screen.getByText('Sit')).toBeInTheDocument()
+    })
+  })
+
+  it('shows View Plan link and Unassign button at the bottom when plan is assigned', async () => {
+    const plan = {
+      id: 'plan-1',
+      name: 'Puppy Basics',
+      schedule: { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
+    }
+    const dog = { id: DOG_ID, name: 'Buddy', picture: 'buddy.jpg', planId: 'plan-1' }
+    const handleSessions = mockSessionsEndpoint({})
+
+    vi.spyOn(global, 'fetch').mockImplementation((url) => {
+      const urlStr = String(url)
+      if (urlStr === `/api/dogs/${DOG_ID}`) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(dog) } as Response)
+      }
+      if (urlStr === '/api/plans') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([plan]) } as Response)
+      }
+      if (urlStr === `/api/plans/plan-1`) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(plan) } as Response)
+      }
+      if (urlStr === '/api/trainings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      }
+      if (urlStr.includes(`/api/dogs/${DOG_ID}/sessions`)) {
+        return handleSessions(urlStr)
+      }
+      return Promise.reject(new Error(`Unknown URL: ${urlStr}`))
+    })
+
+    render(
+      <MemoryRouter initialEntries={[`/dogs/${DOG_ID}`]}>
         <Routes>
           <Route path="/dogs/:id" element={<DogProfile />} />
         </Routes>
@@ -108,41 +179,53 @@ describe('DogProfile', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Puppy Basics')).toBeInTheDocument()
+      expect(screen.getByText('Buddy')).toBeInTheDocument()
     })
+
+    // View Plan link should point to the plan page
+    const viewPlanLink = screen.getByRole('link', { name: /view plan/i })
+    expect(viewPlanLink).toHaveAttribute('href', '/plans/plan-1')
+
+    // Unassign button should be present
+    expect(screen.getByRole('button', { name: /unassign/i })).toBeInTheDocument()
   })
 
   it('allows assigning a training plan', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const plan = {
       id: 'plan-1',
       name: 'Puppy Basics',
       schedule: { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
     }
-    const dog = { id: '123', name: 'Buddy', picture: 'buddy.jpg' }
+    const dog = { id: DOG_ID, name: 'Buddy', picture: 'buddy.jpg' }
     const plans = [plan]
+    const handleSessions = mockSessionsEndpoint({})
 
     vi.spyOn(global, 'fetch').mockImplementation((url, options) => {
-      if (url === '/api/dogs/123' && !options) {
+      const urlStr = String(url)
+      if (urlStr === `/api/dogs/${DOG_ID}` && !options) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(dog) } as Response)
       }
-      if (url === '/api/plans') {
+      if (urlStr === '/api/plans') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(plans) } as Response)
       }
-      if (url === '/api/dogs/123/plan' && options?.method === 'PUT') {
+      if (urlStr === `/api/dogs/${DOG_ID}/plan` && options?.method === 'PUT') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...dog, planId: 'plan-1' }) } as Response)
       }
-      if (url === '/api/plans/plan-1') {
+      if (urlStr === `/api/plans/plan-1`) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(plan) } as Response)
       }
-      if (url === '/api/trainings') {
+      if (urlStr === '/api/trainings') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
       }
-      return Promise.reject(new Error('Unknown URL'))
+      if (urlStr.includes(`/api/dogs/${DOG_ID}/sessions`)) {
+        return handleSessions(urlStr)
+      }
+      return Promise.reject(new Error(`Unknown URL: ${urlStr}`))
     })
 
     render(
-      <MemoryRouter initialEntries={['/dogs/123']}>
+      <MemoryRouter initialEntries={[`/dogs/${DOG_ID}`]}>
         <Routes>
           <Route path="/dogs/:id" element={<DogProfile />} />
         </Routes>
@@ -157,42 +240,48 @@ describe('DogProfile', () => {
     await user.selectOptions(select, 'plan-1')
     await user.click(screen.getByRole('button', { name: /assign/i }))
 
+    // After assigning, progress view should appear (week strip)
     await waitFor(() => {
-      expect(screen.getByText('Puppy Basics')).toBeInTheDocument()
+      expect(screen.getByText('Mon')).toBeInTheDocument()
     })
   })
 
   it('allows unassigning a training plan', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const plan = {
       id: 'plan-1',
       name: 'Puppy Basics',
       schedule: { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
     }
-    const dog = { id: '123', name: 'Buddy', picture: 'buddy.jpg', planId: 'plan-1' }
+    const dog = { id: DOG_ID, name: 'Buddy', picture: 'buddy.jpg', planId: 'plan-1' }
     const plans = [plan]
+    const handleSessions = mockSessionsEndpoint({})
 
     vi.spyOn(global, 'fetch').mockImplementation((url, options) => {
-      if (url === '/api/dogs/123' && !options) {
+      const urlStr = String(url)
+      if (urlStr === `/api/dogs/${DOG_ID}` && !options) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(dog) } as Response)
       }
-      if (url === '/api/plans') {
+      if (urlStr === '/api/plans') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(plans) } as Response)
       }
-      if (url === '/api/plans/plan-1') {
+      if (urlStr === `/api/plans/plan-1`) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(plan) } as Response)
       }
-      if (url === '/api/dogs/123/plan' && options?.method === 'DELETE') {
+      if (urlStr === `/api/dogs/${DOG_ID}/plan` && options?.method === 'DELETE') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...dog, planId: undefined }) } as Response)
       }
-      if (url === '/api/trainings') {
+      if (urlStr === '/api/trainings') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
       }
-      return Promise.reject(new Error('Unknown URL'))
+      if (urlStr.includes(`/api/dogs/${DOG_ID}/sessions`)) {
+        return handleSessions(urlStr)
+      }
+      return Promise.reject(new Error(`Unknown URL: ${urlStr}`))
     })
 
     render(
-      <MemoryRouter initialEntries={['/dogs/123']}>
+      <MemoryRouter initialEntries={[`/dogs/${DOG_ID}`]}>
         <Routes>
           <Route path="/dogs/:id" element={<DogProfile />} />
         </Routes>
@@ -208,55 +297,14 @@ describe('DogProfile', () => {
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /unassign/i })).not.toBeInTheDocument()
     })
-    // Assign button should now be visible (plan selector mode)
     expect(screen.getByRole('button', { name: /assign/i })).toBeInTheDocument()
   })
 
-  it('shows Progress link when dog has an assigned plan', async () => {
-    const plan = {
-      id: 'plan-1',
-      name: 'Puppy Basics',
-      schedule: { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
-    }
-    const dog = { id: '123', name: 'Buddy', picture: 'buddy.jpg', planId: 'plan-1' }
+  it('does not show progress view or plan actions when dog has no plan', async () => {
+    const dog = { id: DOG_ID, name: 'Buddy', picture: 'buddy.jpg' }
 
     vi.spyOn(global, 'fetch').mockImplementation((url) => {
-      if (url === '/api/dogs/123') {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(dog) } as Response)
-      }
-      if (url === '/api/plans') {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([plan]) } as Response)
-      }
-      if (url === '/api/plans/plan-1') {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(plan) } as Response)
-      }
-      if (url === '/api/trainings') {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
-      }
-      return Promise.reject(new Error('Unknown URL'))
-    })
-
-    render(
-      <MemoryRouter initialEntries={['/dogs/123']}>
-        <Routes>
-          <Route path="/dogs/:id" element={<DogProfile />} />
-        </Routes>
-      </MemoryRouter>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('Puppy Basics')).toBeInTheDocument()
-    })
-
-    const progressLink = screen.getByRole('link', { name: /progress/i })
-    expect(progressLink).toHaveAttribute('href', '/dogs/123/progress')
-  })
-
-  it('does not show Progress link when dog has no assigned plan', async () => {
-    const dog = { id: '123', name: 'Buddy', picture: 'buddy.jpg' }
-
-    vi.spyOn(global, 'fetch').mockImplementation((url) => {
-      if (url === '/api/dogs/123') {
+      if (url === `/api/dogs/${DOG_ID}`) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(dog) } as Response)
       }
       if (url === '/api/plans') {
@@ -269,7 +317,7 @@ describe('DogProfile', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/dogs/123']}>
+      <MemoryRouter initialEntries={[`/dogs/${DOG_ID}`]}>
         <Routes>
           <Route path="/dogs/:id" element={<DogProfile />} />
         </Routes>
@@ -280,6 +328,7 @@ describe('DogProfile', () => {
       expect(screen.getByText('Buddy')).toBeInTheDocument()
     })
 
-    expect(screen.queryByRole('link', { name: /progress/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /view plan/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /unassign/i })).not.toBeInTheDocument()
   })
 })

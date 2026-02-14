@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import TrainingPlanSchedule from './TrainingPlanSchedule'
+import ProgressView from './ProgressView'
 
 interface Dog {
   id: string
@@ -121,26 +121,28 @@ function DogProfile() {
         className="rounded-2xl max-h-80 w-full object-cover"
       />
 
-      <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
-        <h3 className="text-lg font-semibold text-slate-700">Training Plan</h3>
-        {assignedPlan ? (
-          <div className="space-y-4">
-            <p className="text-base text-slate-800 font-medium">{assignedPlan.name}</p>
+      {assignedPlan ? (
+        <>
+          <ProgressView dogId={id!} trainings={trainings} />
+
+          <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
             <Link
-              to={`/dogs/${id}/progress`}
+              to={`/plans/${assignedPlan.id}`}
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
             >
-              Progress
+              View Plan
             </Link>
-            <TrainingPlanSchedule schedule={assignedPlan.schedule} trainings={trainings} />
             <button
               onClick={handleUnassign}
-              className="bg-red-50 text-red-600 px-6 py-3 rounded-xl font-medium hover:bg-red-100 transition-colors"
+              className="bg-red-50 text-red-600 px-6 py-3 rounded-xl font-medium hover:bg-red-100 transition-colors block"
             >
               Unassign
             </button>
           </div>
-        ) : (
+        </>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+          <h3 className="text-lg font-semibold text-slate-700">Training Plan</h3>
           <div className="flex items-center gap-3">
             <select
               value={selectedPlanId}
@@ -160,8 +162,8 @@ function DogProfile() {
               Assign
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
