@@ -121,7 +121,7 @@ function Progress() {
     const trainingName = trainingMap.get(session.trainingId) ?? session.trainingId
     setSheetSession({ session, trainingName })
     setSheetStatus(session.status === 'planned' ? 'completed' : session.status as 'completed' | 'skipped')
-    setSheetScore(session.score ?? null)
+    setSheetScore(session.score ?? 5)
     setSheetNotes(session.notes ?? '')
   }
 
@@ -332,14 +332,18 @@ function Progress() {
 
             {sheetStatus === 'completed' && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Score</label>
-                <div className="grid grid-cols-5 gap-2">
-                  {[1,2,3,4,5,6,7,8,9,10].map(n => (
-                    <button key={n} onClick={() => setSheetScore(sheetScore === n ? null : n)}
-                      className={`py-2 rounded-lg text-sm font-medium ${sheetScore === n ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
-                      {n}
-                    </button>
-                  ))}
+                <label htmlFor="score-slider" className="text-sm font-medium text-slate-700">Score</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    id="score-slider"
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={sheetScore ?? 5}
+                    onChange={e => setSheetScore(Number(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-lg font-semibold text-slate-800 w-6 text-center">{sheetScore ?? 5}</span>
                 </div>
               </div>
             )}
