@@ -75,7 +75,7 @@ describe('ProgressReport', () => {
     vi.useRealTimers()
   })
 
-  it('renders the heading when navigating to /progress', () => {
+  it('renders the heading when navigating to /progress', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([])
@@ -83,6 +83,10 @@ describe('ProgressReport', () => {
 
     renderAt('/progress')
     expect(screen.getByText('Progress')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalled()
+    })
   })
 
   it('fetches and renders dog list', async () => {
