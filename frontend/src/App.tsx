@@ -13,6 +13,7 @@ import PlanForm from './PlanForm'
 import PlanDetail from './PlanDetail'
 import PlanEdit from './PlanEdit'
 import Progress from './Progress'
+import ProgressReport from './ProgressReport'
 
 function NavBar() {
   const location = useLocation()
@@ -27,6 +28,7 @@ function NavBar() {
     { to: '/', label: 'Dogs', prefix: '/', icon: '🐕' },
     { to: '/trainings', label: 'Trainings', prefix: '/trainings', icon: '🎯' },
     { to: '/plans', label: 'Plans', prefix: '/plans', icon: '📋' },
+    { to: '/progress', label: 'Progress', prefix: '/progress', icon: '📊' },
   ]
 
   return (
@@ -78,6 +80,7 @@ function App() {
             <Route path="/plans/new" element={<PlanForm />} />
             <Route path="/plans/:id" element={<PlanDetail />} />
             <Route path="/plans/:id/edit" element={<PlanEdit />} />
+            <Route path="/progress" element={<ProgressReport />} />
           </Routes>
         </main>
 
