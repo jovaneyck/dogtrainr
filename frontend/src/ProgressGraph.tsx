@@ -79,56 +79,40 @@ function ProgressGraph({ sessions }: ProgressGraphProps) {
       .attr('font-size', '12px')
       .text('Date')
 
-    // Draw solid line through completed points
+    // Draw line segments between consecutive completed points
+    // Each segment is either solid (no skips between) or dashed (skips between)
     if (completedPoints.length > 1) {
-      const line = d3.line<typeof completedPoints[0]>()
-        .x(d => x(d.date))
-        .y(d => y(d.score!))
-        .curve(d3.curveMonotoneX)
-
-      // Build segments, breaking at skipped sessions
-      // Find consecutive completed runs, and draw dashed lines across skipped gaps
       const completedIndices = dataPoints
-        .map((d, i) => ({ ...d, index: i }))
-        .filter(d => d.status === 'completed')
+        .map((d, i) => ({ point: d, index: i }))
+        .filter(d => d.point.status === 'completed' && d.point.score !== null)
 
-      svg.append('path')
-        .datum(completedPoints)
-        .attr('fill', 'none')
-        .attr('stroke', 'black')
-        .attr('stroke-width', 2)
-        .attr('d', line)
-    }
+      for (let i = 0; i < completedIndices.length - 1; i++) {
+        const from = completedIndices[i]
+        const to = completedIndices[i + 1]
 
-    // Draw dashed lines for skipped gaps
-    for (let i = 0; i < dataPoints.length; i++) {
-      if (dataPoints[i].status === 'skipped') {
-        // Find preceding completed
-        let prev = null
-        for (let j = i - 1; j >= 0; j--) {
-          if (dataPoints[j].status === 'completed' && dataPoints[j].score !== null) {
-            prev = dataPoints[j]
-            break
-          }
-        }
-        // Find following completed
-        let next = null
-        for (let j = i + 1; j < dataPoints.length; j++) {
-          if (dataPoints[j].status === 'completed' && dataPoints[j].score !== null) {
-            next = dataPoints[j]
-            break
-          }
-        }
-        if (prev && next) {
+        const hasSkipBetween = dataPoints
+          .slice(from.index + 1, to.index)
+          .some(d => d.status === 'skipped')
+
+        if (hasSkipBetween) {
           svg.append('line')
             .attr('class', 'skipped')
-            .attr('x1', x(prev.date))
-            .attr('y1', y(prev.score!))
-            .attr('x2', x(next.date))
-            .attr('y2', y(next.score!))
+            .attr('x1', x(from.point.date))
+            .attr('y1', y(from.point.score!))
+            .attr('x2', x(to.point.date))
+            .attr('y2', y(to.point.score!))
             .attr('stroke', 'gray')
             .attr('stroke-width', 2)
             .attr('stroke-dasharray', '5,5')
+        } else {
+          svg.append('line')
+            .attr('class', 'solid')
+            .attr('x1', x(from.point.date))
+            .attr('y1', y(from.point.score!))
+            .attr('x2', x(to.point.date))
+            .attr('y2', y(to.point.score!))
+            .attr('stroke', 'black')
+            .attr('stroke-width', 2)
         }
       }
     }

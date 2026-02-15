@@ -43,4 +43,26 @@ describe('ProgressGraph', () => {
     expect(container.querySelector('svg')).toBeInTheDocument()
     expect(container.querySelectorAll('circle.completed').length).toBe(0)
   })
+
+  it('renders only a dashed segment when all completed points have skips between them', () => {
+    const { container } = render(<ProgressGraph sessions={sessionsWithSkipped} />)
+    const solidSegments = container.querySelectorAll('line.solid')
+    const dashedSegments = container.querySelectorAll('line.skipped')
+    expect(solidSegments.length).toBe(0)
+    expect(dashedSegments.length).toBe(1)
+  })
+
+  it('renders solid and dashed segments for mixed case', () => {
+    const mixedSessions = [
+      { dogId: 'd1', trainingId: 't1', date: '2026-01-01', status: 'completed' as const, score: 5 },
+      { dogId: 'd1', trainingId: 't1', date: '2026-01-02', status: 'completed' as const, score: 7 },
+      { dogId: 'd1', trainingId: 't1', date: '2026-01-03', status: 'skipped' as const },
+      { dogId: 'd1', trainingId: 't1', date: '2026-01-04', status: 'completed' as const, score: 9 }
+    ]
+    const { container } = render(<ProgressGraph sessions={mixedSessions} />)
+    const solidSegments = container.querySelectorAll('line.solid')
+    const dashedSegments = container.querySelectorAll('line.skipped')
+    expect(solidSegments.length).toBe(1)
+    expect(dashedSegments.length).toBe(1)
+  })
 })
