@@ -1,5 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import ProgressGraph from './ProgressGraph'
+
+type TimeRange = 'all' | 'year' | 'month' | 'week'
+
+const TIME_RANGE_OPTIONS: { label: string; value: TimeRange }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Year', value: 'year' },
+  { label: 'Month', value: 'month' },
+  { label: 'Week', value: 'week' },
+]
+
+function getCutoffDate(range: TimeRange): string | null {
+  if (range === 'all') return null
+  const now = new Date()
+  const days = range === 'year' ? 365 : range === 'month' ? 30 : 7
+  now.setDate(now.getDate() - days)
+  return now.toISOString().slice(0, 10)
+}
 
 interface Dog {
   id: string
@@ -28,6 +45,7 @@ function ProgressReport() {
   const [dogs, setDogs] = useState<Dog[]>([])
   const [selectedDogId, setSelectedDogId] = useState<string | null>(null)
   const [selectedTrainingId, setSelectedTrainingId] = useState<string | null>(null)
+  const [timeRange, setTimeRange] = useState<TimeRange>('all')
   const [trainings, setTrainings] = useState<Training[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
 
@@ -42,6 +60,7 @@ function ProgressReport() {
       setTrainings([])
       setSessions([])
       setSelectedTrainingId(null)
+      setTimeRange('all')
       return
     }
 
@@ -79,14 +98,35 @@ function ProgressReport() {
             <div className="mt-4">
               <p className="font-medium">{selectedTraining.name}</p>
               <button
-                onClick={() => setSelectedTrainingId(null)}
+                onClick={() => { setSelectedTrainingId(null); setTimeRange('all') }}
                 className="mt-2 text-sm text-blue-600 hover:underline"
               >
                 Change training
               </button>
+              <div className="mt-3 flex gap-2">
+                {TIME_RANGE_OPTIONS.map(({ label, value }) => (
+                  <button
+                    key={value}
+                    onClick={() => setTimeRange(value)}
+                    className={`rounded-full px-3 py-1 text-sm font-medium ${
+                      timeRange === value
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <ProgressGraph
                 sessions={sessions
-                  .filter(s => s.trainingId === selectedTrainingId && (s.status === 'completed' || s.status === 'skipped'))
+                  .filter(s => {
+                    if (s.trainingId !== selectedTrainingId) return false
+                    if (s.status !== 'completed' && s.status !== 'skipped') return false
+                    const cutoff = getCutoffDate(timeRange)
+                    if (cutoff && s.date < cutoff) return false
+                    return true
+                  })
                   .sort((a, b) => a.date.localeCompare(b.date))}
               />
             </div>

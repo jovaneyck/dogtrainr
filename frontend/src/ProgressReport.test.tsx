@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -31,6 +31,13 @@ const sessions = [
   { dogId: 'dog-1', trainingId: 'tr-3', date: '2026-01-12', status: 'planned' }
 ]
 
+const sessionsForFilter = [
+  { dogId: 'dog-1', trainingId: 'tr-1', date: '2025-01-01', status: 'completed', score: 3 },
+  { dogId: 'dog-1', trainingId: 'tr-1', date: '2026-01-20', status: 'completed', score: 5 },
+  { dogId: 'dog-1', trainingId: 'tr-1', date: '2026-02-01', status: 'completed', score: 7 },
+  { dogId: 'dog-1', trainingId: 'tr-1', date: '2026-02-14', status: 'completed', score: 9 },
+]
+
 function mockFetchDogsOnly() {
   vi.spyOn(global, 'fetch').mockImplementation((url) => {
     const urlStr = String(url)
@@ -41,7 +48,7 @@ function mockFetchDogsOnly() {
   })
 }
 
-function mockFetchAll() {
+function mockFetchAll(sessionData = sessions) {
   vi.spyOn(global, 'fetch').mockImplementation((url) => {
     const urlStr = String(url)
     if (urlStr === '/api/dogs') {
@@ -51,7 +58,7 @@ function mockFetchAll() {
       return Promise.resolve({ ok: true, json: () => Promise.resolve(trainings) } as Response)
     }
     if (urlStr.includes('/api/dogs/dog-1/sessions')) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(sessions) } as Response)
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(sessionData) } as Response)
     }
     return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
   })
@@ -59,7 +66,13 @@ function mockFetchAll() {
 
 describe('ProgressReport', () => {
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-02-15T12:00:00'))
     vi.resetAllMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders the heading when navigating to /progress', () => {
@@ -228,6 +241,135 @@ describe('ProgressReport', () => {
     await waitFor(() => {
       expect(screen.getByText('Sit')).toBeInTheDocument()
       expect(screen.getByText('Stay')).toBeInTheDocument()
+    })
+  })
+
+  it('shows filter buttons when training is selected', async () => {
+    const user = userEvent.setup()
+    mockFetchAll(sessionsForFilter)
+
+    renderAt('/progress')
+
+    await waitFor(() => {
+      expect(screen.getByText('Buddy')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Buddy'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Sit')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Sit'))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Year' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Month' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Week' })).toBeInTheDocument()
+    })
+  })
+
+  it('default "All" shows all sessions and is visually active', async () => {
+    const user = userEvent.setup()
+    mockFetchAll(sessionsForFilter)
+
+    renderAt('/progress')
+
+    await waitFor(() => {
+      expect(screen.getByText('Buddy')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Buddy'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Sit')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Sit'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('progress-graph')).toBeInTheDocument()
+    })
+
+    const allButton = screen.getByRole('button', { name: 'All' })
+    expect(allButton.className).toContain('bg-blue-600')
+
+    const graph = screen.getByTestId('progress-graph')
+    const dots = graph.querySelectorAll('circle.completed')
+    expect(dots.length).toBe(4)
+  })
+
+  it('clicking "Week" filters to only recent sessions', async () => {
+    const user = userEvent.setup()
+    mockFetchAll(sessionsForFilter)
+
+    renderAt('/progress')
+
+    await waitFor(() => {
+      expect(screen.getByText('Buddy')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Buddy'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Sit')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Sit'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('progress-graph')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Week' }))
+
+    await waitFor(() => {
+      const graph = screen.getByTestId('progress-graph')
+      const dots = graph.querySelectorAll('circle.completed')
+      expect(dots.length).toBe(1)
+    })
+
+    const weekButton = screen.getByRole('button', { name: 'Week' })
+    expect(weekButton.className).toContain('bg-blue-600')
+  })
+
+  it('clicking "All" after another filter shows all sessions again', async () => {
+    const user = userEvent.setup()
+    mockFetchAll(sessionsForFilter)
+
+    renderAt('/progress')
+
+    await waitFor(() => {
+      expect(screen.getByText('Buddy')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Buddy'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Sit')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Sit'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('progress-graph')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Week' }))
+
+    await waitFor(() => {
+      const graph = screen.getByTestId('progress-graph')
+      const dots = graph.querySelectorAll('circle.completed')
+      expect(dots.length).toBe(1)
+    })
+
+    await user.click(screen.getByRole('button', { name: 'All' }))
+
+    await waitFor(() => {
+      const graph = screen.getByTestId('progress-graph')
+      const dots = graph.querySelectorAll('circle.completed')
+      expect(dots.length).toBe(4)
     })
   })
 })
