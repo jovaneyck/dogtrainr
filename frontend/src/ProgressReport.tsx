@@ -44,6 +44,7 @@ interface Session {
 
 function ProgressReport() {
   const [dogs, setDogs] = useState<Dog[]>([])
+  const [error, setError] = useState(false)
   const [selectedDogId, setSelectedDogId] = useState<string | null>(null)
   const [selectedTrainingId, setSelectedTrainingId] = useState<string | null>(null)
   const [timeRange, setTimeRange] = useState<TimeRange>('all')
@@ -52,8 +53,12 @@ function ProgressReport() {
 
   useEffect(() => {
     fetch('/api/dogs')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('fetch failed')
+        return res.json()
+      })
       .then(setDogs)
+      .catch(() => setError(true))
   }, [])
 
   useEffect(() => {
@@ -81,6 +86,17 @@ function ProgressReport() {
   const relevantTrainings = trainings.filter(t => relevantTrainingIds.includes(t.id))
 
   const selectedTraining = trainings.find(t => t.id === selectedTrainingId)
+
+  if (error) {
+    return (
+      <div>
+        <h2 className="text-2xl font-bold text-slate-800">Progress</h2>
+        <div className="flex flex-col items-center justify-center py-16 space-y-4">
+          <p className="text-red-500 text-lg">Something went wrong. Please try again later.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>

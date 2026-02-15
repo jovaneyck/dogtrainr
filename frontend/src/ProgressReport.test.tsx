@@ -75,6 +75,30 @@ describe('ProgressReport', () => {
     vi.useRealTimers()
   })
 
+  it('shows error message when fetch returns non-ok response', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ error: 'Internal Server Error' })
+    } as Response)
+
+    renderAt('/progress')
+
+    await waitFor(() => {
+      expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+    })
+  })
+
+  it('shows error message when fetch rejects with network error', async () => {
+    vi.spyOn(global, 'fetch').mockRejectedValue(new Error('Network error'))
+
+    renderAt('/progress')
+
+    await waitFor(() => {
+      expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+    })
+  })
+
   it('renders the heading when navigating to /progress', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
