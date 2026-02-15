@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import ProgressGraph from './ProgressGraph'
 import DogTile from './DogTile'
 
@@ -43,10 +44,12 @@ interface Session {
 }
 
 function ProgressReport() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedDogId = searchParams.get('dog')
+  const selectedTrainingId = searchParams.get('training')
+
   const [dogs, setDogs] = useState<Dog[]>([])
   const [error, setError] = useState(false)
-  const [selectedDogId, setSelectedDogId] = useState<string | null>(null)
-  const [selectedTrainingId, setSelectedTrainingId] = useState<string | null>(null)
   const [timeRange, setTimeRange] = useState<TimeRange>('all')
   const [trainings, setTrainings] = useState<Training[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
@@ -65,7 +68,6 @@ function ProgressReport() {
     if (!selectedDogId) {
       setTrainings([])
       setSessions([])
-      setSelectedTrainingId(null)
       setTimeRange('all')
       return
     }
@@ -87,6 +89,23 @@ function ProgressReport() {
 
   const selectedTraining = trainings.find(t => t.id === selectedTrainingId)
 
+  function selectDog(dogId: string) {
+    setSearchParams({ dog: dogId })
+  }
+
+  function deselectDog() {
+    setSearchParams({})
+  }
+
+  function selectTraining(trainingId: string) {
+    setSearchParams({ dog: selectedDogId!, training: trainingId })
+  }
+
+  function deselectTraining() {
+    setSearchParams({ dog: selectedDogId! })
+    setTimeRange('all')
+  }
+
   if (error) {
     return (
       <div>
@@ -105,7 +124,7 @@ function ProgressReport() {
         <div className="mt-4">
           <p className="text-lg font-semibold">{selectedDog.name}</p>
           <button
-            onClick={() => setSelectedDogId(null)}
+            onClick={deselectDog}
             className="mt-2 text-sm text-blue-600 hover:underline"
           >
             Change dog
@@ -115,7 +134,7 @@ function ProgressReport() {
             <div className="mt-4">
               <p className="font-medium">{selectedTraining.name}</p>
               <button
-                onClick={() => { setSelectedTrainingId(null); setTimeRange('all') }}
+                onClick={deselectTraining}
                 className="mt-2 text-sm text-blue-600 hover:underline"
               >
                 Change training
@@ -152,7 +171,7 @@ function ProgressReport() {
               {relevantTrainings.map(training => (
                 <button
                   key={training.id}
-                  onClick={() => setSelectedTrainingId(training.id)}
+                  onClick={() => selectTraining(training.id)}
                   className="rounded-lg border border-slate-200 p-4 text-left hover:bg-slate-50"
                 >
                   {training.name}
@@ -164,7 +183,7 @@ function ProgressReport() {
       ) : (
         <div className="mt-4 grid gap-3">
           {dogs.map(dog => (
-            <DogTile key={dog.id} dog={dog} onClick={() => setSelectedDogId(dog.id)} />
+            <DogTile key={dog.id} dog={dog} onClick={() => selectDog(dog.id)} />
           ))}
         </div>
       )}

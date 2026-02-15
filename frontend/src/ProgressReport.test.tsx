@@ -8,7 +8,7 @@ function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/progress" element={<ProgressReport />} />
+        <Route path="/progress/*" element={<ProgressReport />} />
       </Routes>
     </MemoryRouter>
   )
