@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import ProgressGraph from './ProgressGraph'
 
 interface Dog {
   id: string
@@ -83,7 +84,11 @@ function ProgressReport() {
               >
                 Change training
               </button>
-              <p className="mt-4 text-slate-500">Graph coming soon...</p>
+              <ProgressGraph
+                sessions={sessions
+                  .filter(s => s.trainingId === selectedTrainingId && (s.status === 'completed' || s.status === 'skipped'))
+                  .sort((a, b) => a.date.localeCompare(b.date))}
+              />
             </div>
           ) : (
             <div className="mt-4 grid gap-3">

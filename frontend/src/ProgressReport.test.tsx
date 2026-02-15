@@ -179,6 +179,32 @@ describe('ProgressReport', () => {
     expect(screen.getByRole('button', { name: /change training/i })).toBeInTheDocument()
   })
 
+  it('renders the progress graph when a training is selected', async () => {
+    const user = userEvent.setup()
+    mockFetchAll()
+
+    renderAt('/progress')
+
+    await waitFor(() => {
+      expect(screen.getByText('Buddy')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Buddy'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Sit')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Sit'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('progress-graph')).toBeInTheDocument()
+    })
+
+    const graph = screen.getByTestId('progress-graph')
+    expect(graph.querySelector('svg')).toBeInTheDocument()
+  })
+
   it('can go back from training selection to training list', async () => {
     const user = userEvent.setup()
     mockFetchAll()
