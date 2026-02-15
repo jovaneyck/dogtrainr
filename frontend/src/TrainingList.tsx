@@ -11,19 +11,34 @@ interface Training {
 function TrainingList() {
   const [trainings, setTrainings] = useState<Training[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     fetch('/api/trainings')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('fetch failed')
+        return res.json()
+      })
       .then(data => {
         setTrainings(data)
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => {
+        setError(true)
+        setLoading(false)
+      })
   }, [])
 
   if (loading) {
     return <p className="text-slate-500 text-center py-12">Loading...</p>
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 space-y-4">
+        <p className="text-red-500 text-lg">Something went wrong. Please try again later.</p>
+      </div>
+    )
   }
 
   if (trainings.length === 0) {
