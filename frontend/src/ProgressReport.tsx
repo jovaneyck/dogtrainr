@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import ProgressGraph from './ProgressGraph'
+import DogTile from './DogTile'
 
 type TimeRange = 'all' | 'year' | 'month' | 'week'
 
@@ -147,13 +148,7 @@ function ProgressReport() {
       ) : (
         <div className="mt-4 grid gap-3">
           {dogs.map(dog => (
-            <button
-              key={dog.id}
-              onClick={() => setSelectedDogId(dog.id)}
-              className="rounded-lg border border-slate-200 p-4 text-left hover:bg-slate-50"
-            >
-              {dog.name}
-            </button>
+            <DogTile key={dog.id} dog={dog} onClick={() => setSelectedDogId(dog.id)} />
           ))}
         </div>
       )}
