@@ -4,14 +4,14 @@ import multer from 'multer';
 import request from 'supertest';
 import { dogRoutes } from './dogRoutes.js';
 import { FakeDogRepository } from './FakeDogRepository.js';
-import { NoopStorage } from '../shared/noopStorage.js';
+import { FakeStorage } from '../shared/FakeStorage.js';
 
 describe('Dog routes (HTTP adapter)', () => {
   let app: Express;
   let repo: FakeDogRepository;
 
   beforeEach(() => {
-    const upload = multer({ storage: new NoopStorage() });
+    const upload = multer({ storage: new FakeStorage() });
     repo = new FakeDogRepository();
     app = express();
     app.use(express.json());

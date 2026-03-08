@@ -4,14 +4,14 @@ import express, { type Express } from 'express';
 import multer from 'multer';
 import { trainingRoutes } from './trainingRoutes.js';
 import { FakeTrainingRepository } from './FakeTrainingRepository.js';
-import { NoopStorage } from '../shared/noopStorage.js';
+import { FakeStorage } from '../shared/FakeStorage.js';
 
 describe('Training routes (HTTP adapter)', () => {
   let app: Express;
   let repo: FakeTrainingRepository;
 
   beforeEach(() => {
-    const upload = multer({ storage: new NoopStorage() });
+    const upload = multer({ storage: new FakeStorage() });
     repo = new FakeTrainingRepository();
     app = express();
     app.use(express.json());
