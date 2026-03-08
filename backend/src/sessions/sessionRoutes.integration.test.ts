@@ -1,35 +1,31 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createApp } from './index.js';
-import request from 'supertest';
-import fs from 'fs';
-import path from 'path';
+import { describe, it, expect, beforeEach } from 'vitest';
+import express, { type Express } from 'express';
 import crypto from 'crypto';
-import type { Express } from 'express';
+import request from 'supertest';
+import { sessionRoutes } from './sessionRoutes.js';
+import { FakeDogRepository } from '../dogs/FakeDogRepository.js';
+import { FakeSessionRepository } from './FakeSessionRepository.js';
+import { FakePlanRepository } from '../plans/FakePlanRepository.js';
+import { SessionListingService } from './SessionListingService.js';
 
 describe('Sessions API', () => {
   let app: Express;
-  let dataRoot: string;
-  let dogId: string;
+  let dogs: FakeDogRepository;
+  let sessions: FakeSessionRepository;
+  let plans: FakePlanRepository;
+  const dogId = crypto.randomUUID();
   const trainingId = crypto.randomUUID();
 
-  beforeEach(async () => {
-    dataRoot = path.join(process.cwd(), 'data', `test-${crypto.randomUUID()}`);
-    fs.mkdirSync(path.join(dataRoot, 'dogs'), { recursive: true });
-    app = createApp(dataRoot);
+  beforeEach(() => {
+    dogs = new FakeDogRepository();
+    sessions = new FakeSessionRepository();
+    plans = new FakePlanRepository();
+    const service = new SessionListingService(dogs, plans, sessions);
+    app = express();
+    app.use(express.json());
+    app.use('/api', sessionRoutes(dogs, sessions, service));
 
-    // Create a dog for all session tests
-    const testImageBuffer = Buffer.from('fake-image-data');
-    const res = await request(app)
-      .post('/api/dogs')
-      .field('name', 'Buddy')
-      .attach('picture', testImageBuffer, 'buddy.jpg');
-    dogId = res.body.id;
-  });
-
-  afterEach(() => {
-    if (fs.existsSync(dataRoot)) {
-      fs.rmSync(dataRoot, { recursive: true });
-    }
+    dogs.save({ id: dogId, name: 'Buddy', picture: 'buddy.jpg' });
   });
 
   describe('POST /api/dogs/:dogId/sessions', () => {
@@ -128,11 +124,9 @@ describe('Sessions API', () => {
 
   describe('GET /api/dogs/:dogId/sessions/:id', () => {
     it('returns a session by id', async () => {
-      const createRes = await request(app)
-        .post(`/api/dogs/${dogId}/sessions`)
-        .send({ trainingId, date: '2026-02-14', status: 'completed', score: 9 });
+      const sessionId = crypto.randomUUID();
+      sessions.save({ id: sessionId, dogId, trainingId, date: '2026-02-14', status: 'completed', score: 9 });
 
-      const sessionId = createRes.body.id;
       const res = await request(app).get(`/api/dogs/${dogId}/sessions/${sessionId}`);
 
       expect(res.status).toBe(200);
@@ -148,34 +142,27 @@ describe('Sessions API', () => {
     });
 
     it('returns 404 when session belongs to a different dog', async () => {
-      // Create session for dogId
-      const createRes = await request(app)
-        .post(`/api/dogs/${dogId}/sessions`)
-        .send({ trainingId, date: '2026-02-14', status: 'completed' });
+      const sessionId = crypto.randomUUID();
+      sessions.save({ id: sessionId, dogId, trainingId, date: '2026-02-14', status: 'completed' });
 
-      const sessionId = createRes.body.id;
+      const dog2Id = crypto.randomUUID();
+      dogs.save({ id: dog2Id, name: 'Rex', picture: 'rex.jpg' });
 
-      // Create another dog
-      const testImageBuffer = Buffer.from('fake-image-data');
-      const dog2Res = await request(app)
-        .post('/api/dogs')
-        .field('name', 'Rex')
-        .attach('picture', testImageBuffer, 'rex.jpg');
-      const dog2Id = dog2Res.body.id;
-
-      // Try to get session via wrong dog
       const res = await request(app).get(`/api/dogs/${dog2Id}/sessions/${sessionId}`);
       expect(res.status).toBe(404);
+    });
+
+    it('returns 400 when session id is not a valid UUID', async () => {
+      const res = await request(app).get(`/api/dogs/${dogId}/sessions/not-a-uuid`);
+      expect(res.status).toBe(400);
     });
   });
 
   describe('PUT /api/dogs/:dogId/sessions/:id', () => {
     it('updates session status, score and notes', async () => {
-      const createRes = await request(app)
-        .post(`/api/dogs/${dogId}/sessions`)
-        .send({ trainingId, date: '2026-02-14', status: 'completed', score: 5 });
+      const sessionId = crypto.randomUUID();
+      sessions.save({ id: sessionId, dogId, trainingId, date: '2026-02-14', status: 'completed', score: 5 });
 
-      const sessionId = createRes.body.id;
       const res = await request(app)
         .put(`/api/dogs/${dogId}/sessions/${sessionId}`)
         .send({ status: 'completed', score: 9, notes: 'Improved!' });
@@ -183,7 +170,7 @@ describe('Sessions API', () => {
       expect(res.status).toBe(200);
       expect(res.body.score).toBe(9);
       expect(res.body.notes).toBe('Improved!');
-      expect(res.body.trainingId).toBe(trainingId); // unchanged fields preserved
+      expect(res.body.trainingId).toBe(trainingId);
     });
 
     it('returns 404 for non-existent session', async () => {
@@ -196,31 +183,23 @@ describe('Sessions API', () => {
     });
 
     it('returns 404 when session belongs to a different dog', async () => {
-      const createRes = await request(app)
-        .post(`/api/dogs/${dogId}/sessions`)
-        .send({ trainingId, date: '2026-02-14', status: 'completed' });
+      const sessionId = crypto.randomUUID();
+      sessions.save({ id: sessionId, dogId, trainingId, date: '2026-02-14', status: 'completed' });
 
-      const sessionId = createRes.body.id;
-
-      const testImageBuffer = Buffer.from('fake-image-data');
-      const dog2Res = await request(app)
-        .post('/api/dogs')
-        .field('name', 'Rex')
-        .attach('picture', testImageBuffer, 'rex.jpg');
+      const dog2Id = crypto.randomUUID();
+      dogs.save({ id: dog2Id, name: 'Rex', picture: 'rex.jpg' });
 
       const res = await request(app)
-        .put(`/api/dogs/${dog2Res.body.id}/sessions/${sessionId}`)
+        .put(`/api/dogs/${dog2Id}/sessions/${sessionId}`)
         .send({ status: 'skipped' });
 
       expect(res.status).toBe(404);
     });
 
     it('returns 400 when score provided for skipped status', async () => {
-      const createRes = await request(app)
-        .post(`/api/dogs/${dogId}/sessions`)
-        .send({ trainingId, date: '2026-02-14', status: 'completed', score: 5 });
+      const sessionId = crypto.randomUUID();
+      sessions.save({ id: sessionId, dogId, trainingId, date: '2026-02-14', status: 'completed', score: 5 });
 
-      const sessionId = createRes.body.id;
       const res = await request(app)
         .put(`/api/dogs/${dogId}/sessions/${sessionId}`)
         .send({ status: 'skipped', score: 5 });
@@ -229,11 +208,9 @@ describe('Sessions API', () => {
     });
 
     it('returns 400 when score is out of range', async () => {
-      const createRes = await request(app)
-        .post(`/api/dogs/${dogId}/sessions`)
-        .send({ trainingId, date: '2026-02-14', status: 'completed' });
+      const sessionId = crypto.randomUUID();
+      sessions.save({ id: sessionId, dogId, trainingId, date: '2026-02-14', status: 'completed' });
 
-      const sessionId = createRes.body.id;
       const res = await request(app)
         .put(`/api/dogs/${dogId}/sessions/${sessionId}`)
         .send({ score: 11 });
@@ -252,19 +229,17 @@ describe('Sessions API', () => {
     });
 
     it('returns computed planned sessions based on plan schedule', async () => {
-      // Create a plan with monday training
       const trainingId1 = crypto.randomUUID();
-      const planRes = await request(app).post('/api/plans').send({
+      const planId = crypto.randomUUID();
+      plans.save({
+        id: planId,
         name: 'Puppy Basics',
         schedule: {
           monday: [trainingId1], tuesday: [], wednesday: [],
           thursday: [], friday: [], saturday: [], sunday: []
         }
       });
-      const planId = planRes.body.id;
-
-      // Assign plan to dog
-      await request(app).put(`/api/dogs/${dogId}/plan`).send({ planId });
+      dogs.save({ id: dogId, name: 'Buddy', picture: 'buddy.jpg', planId });
 
       // 2026-02-09 is Monday, 2026-02-15 is Sunday
       const res = await request(app)
@@ -279,43 +254,37 @@ describe('Sessions API', () => {
         date: '2026-02-09',
         status: 'planned'
       });
-      // No id field on computed sessions
       expect(res.body[0].id).toBeUndefined();
     });
 
     it('returns persisted sessions in the date range', async () => {
-      const createRes = await request(app)
-        .post(`/api/dogs/${dogId}/sessions`)
-        .send({ trainingId, date: '2026-02-10', status: 'completed', score: 8 });
+      const sessionId = crypto.randomUUID();
+      sessions.save({ id: sessionId, dogId, trainingId, date: '2026-02-10', status: 'completed', score: 8 });
 
       const res = await request(app)
         .get(`/api/dogs/${dogId}/sessions?from=2026-02-09&to=2026-02-15`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(1);
-      expect(res.body[0].id).toBe(createRes.body.id);
+      expect(res.body[0].id).toBe(sessionId);
       expect(res.body[0].status).toBe('completed');
     });
 
     it('merges persisted sessions with computed planned sessions', async () => {
-      // Create plan with monday + tuesday trainings
       const trainingId1 = crypto.randomUUID();
-      const planRes = await request(app).post('/api/plans').send({
+      const planId = crypto.randomUUID();
+      plans.save({
+        id: planId,
         name: 'Puppy Basics',
         schedule: {
           monday: [trainingId1], tuesday: [trainingId1], wednesday: [],
           thursday: [], friday: [], saturday: [], sunday: []
         }
       });
-      const planId = planRes.body.id;
+      dogs.save({ id: dogId, name: 'Buddy', picture: 'buddy.jpg', planId });
 
-      // Assign plan to dog
-      await request(app).put(`/api/dogs/${dogId}/plan`).send({ planId });
-
-      // Create a persisted session for Monday (2026-02-09)
-      await request(app)
-        .post(`/api/dogs/${dogId}/sessions`)
-        .send({ trainingId: trainingId1, planId, date: '2026-02-09', status: 'completed', score: 9 });
+      const sessionId = crypto.randomUUID();
+      sessions.save({ id: sessionId, dogId, trainingId: trainingId1, planId, date: '2026-02-09', status: 'completed', score: 9 });
 
       // Query Mon-Tue range
       const res = await request(app)
@@ -359,22 +328,11 @@ describe('Sessions API', () => {
     });
 
     it('only returns sessions for the requested dog', async () => {
-      // Create a session for our dog
-      await request(app)
-        .post(`/api/dogs/${dogId}/sessions`)
-        .send({ trainingId, date: '2026-02-10', status: 'completed' });
+      sessions.save({ id: crypto.randomUUID(), dogId, trainingId, date: '2026-02-10', status: 'completed' });
 
-      // Create another dog with a session
-      const testImageBuffer = Buffer.from('fake-image-data');
-      const dog2Res = await request(app)
-        .post('/api/dogs')
-        .field('name', 'Rex')
-        .attach('picture', testImageBuffer, 'rex.jpg');
-      const dog2Id = dog2Res.body.id;
-
-      await request(app)
-        .post(`/api/dogs/${dog2Id}/sessions`)
-        .send({ trainingId, date: '2026-02-10', status: 'skipped' });
+      const dog2Id = crypto.randomUUID();
+      dogs.save({ id: dog2Id, name: 'Rex', picture: 'rex.jpg' });
+      sessions.save({ id: crypto.randomUUID(), dogId: dog2Id, trainingId, date: '2026-02-10', status: 'skipped' });
 
       const res = await request(app)
         .get(`/api/dogs/${dogId}/sessions?from=2026-02-09&to=2026-02-15`);
@@ -387,16 +345,12 @@ describe('Sessions API', () => {
 
   describe('DELETE /api/dogs/:dogId/sessions/:id', () => {
     it('deletes a session', async () => {
-      const createRes = await request(app)
-        .post(`/api/dogs/${dogId}/sessions`)
-        .send({ trainingId, date: '2026-02-14', status: 'completed' });
+      const sessionId = crypto.randomUUID();
+      sessions.save({ id: sessionId, dogId, trainingId, date: '2026-02-14', status: 'completed' });
 
-      const sessionId = createRes.body.id;
       const res = await request(app).delete(`/api/dogs/${dogId}/sessions/${sessionId}`);
-
       expect(res.status).toBe(204);
 
-      // Verify deleted
       const getRes = await request(app).get(`/api/dogs/${dogId}/sessions/${sessionId}`);
       expect(getRes.status).toBe(404);
     });
@@ -409,19 +363,13 @@ describe('Sessions API', () => {
     });
 
     it('returns 404 when session belongs to a different dog', async () => {
-      const createRes = await request(app)
-        .post(`/api/dogs/${dogId}/sessions`)
-        .send({ trainingId, date: '2026-02-14', status: 'completed' });
+      const sessionId = crypto.randomUUID();
+      sessions.save({ id: sessionId, dogId, trainingId, date: '2026-02-14', status: 'completed' });
 
-      const sessionId = createRes.body.id;
+      const dog2Id = crypto.randomUUID();
+      dogs.save({ id: dog2Id, name: 'Rex', picture: 'rex.jpg' });
 
-      const testImageBuffer = Buffer.from('fake-image-data');
-      const dog2Res = await request(app)
-        .post('/api/dogs')
-        .field('name', 'Rex')
-        .attach('picture', testImageBuffer, 'rex.jpg');
-
-      const res = await request(app).delete(`/api/dogs/${dog2Res.body.id}/sessions/${sessionId}`);
+      const res = await request(app).delete(`/api/dogs/${dog2Id}/sessions/${sessionId}`);
       expect(res.status).toBe(404);
     });
   });

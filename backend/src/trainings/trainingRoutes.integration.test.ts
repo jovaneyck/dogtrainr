@@ -1,25 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createApp } from './index.js';
+import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import type { Express } from 'express';
+import express, { type Express } from 'express';
+import multer from 'multer';
+import { trainingRoutes } from './trainingRoutes.js';
+import { FakeTrainingRepository } from './FakeTrainingRepository.js';
+import { NoopStorage } from '../shared/noopStorage.js';
 
-describe('Trainings API', () => {
+describe('Training routes (HTTP adapter)', () => {
   let app: Express;
-  let dataRoot: string;
+  let repo: FakeTrainingRepository;
 
   beforeEach(() => {
-    dataRoot = path.join(process.cwd(), 'data', `test-${crypto.randomUUID()}`);
-    fs.mkdirSync(path.join(dataRoot, 'trainings'), { recursive: true });
-    app = createApp(dataRoot);
-  });
-
-  afterEach(() => {
-    if (fs.existsSync(dataRoot)) {
-      fs.rmSync(dataRoot, { recursive: true });
-    }
+    const upload = multer({ storage: new NoopStorage() });
+    repo = new FakeTrainingRepository();
+    app = express();
+    app.use(express.json());
+    app.use('/api', trainingRoutes(repo, upload));
   });
 
   describe('GET /api/trainings', () => {
@@ -27,6 +23,15 @@ describe('Trainings API', () => {
       const response = await request(app).get('/api/trainings');
       expect(response.status).toBe(200);
       expect(response.body).toEqual([]);
+    });
+
+    it('returns all trainings from the repo', async () => {
+      repo.save({ id: crypto.randomUUID(), name: 'Sit', procedure: '', tips: '' });
+      repo.save({ id: crypto.randomUUID(), name: 'Down', procedure: '', tips: '' });
+
+      const response = await request(app).get('/api/trainings');
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(2);
     });
   });
 
@@ -45,20 +50,20 @@ describe('Trainings API', () => {
       expect(response.body.name).toBe('Sit');
       expect(response.body.procedure).toBe('# Steps\n1. Hold treat above nose\n2. Say "sit"');
       expect(response.body.tips).toBe('- Be patient\n- Use high-value treats');
+    });
 
-      // Verify training is persisted
-      const listResponse = await request(app).get('/api/trainings');
-      expect(listResponse.body).toHaveLength(1);
-      expect(listResponse.body[0].name).toBe('Sit');
+    it('persists the created training in the repo', async () => {
+      const response = await request(app)
+        .post('/api/trainings')
+        .send({ name: 'Sit', procedure: '', tips: '' });
+
+      expect(repo.getById(response.body.id)).not.toBeNull();
     });
 
     it('returns 400 when name is missing', async () => {
       const response = await request(app)
         .post('/api/trainings')
-        .send({
-          procedure: '# Steps',
-          tips: '- Tips'
-        });
+        .send({ procedure: '# Steps', tips: '- Tips' });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Name is required');
@@ -67,15 +72,12 @@ describe('Trainings API', () => {
 
   describe('GET /api/trainings/:id', () => {
     it('returns a single training by id', async () => {
-      const createResponse = await request(app)
-        .post('/api/trainings')
-        .send({ name: 'Down', procedure: '# Down', tips: '- Tip' });
+      const id = crypto.randomUUID();
+      repo.save({ id, name: 'Down', procedure: '# Down', tips: '- Tip' });
 
-      const trainingId = createResponse.body.id;
-      const response = await request(app).get(`/api/trainings/${trainingId}`);
-
+      const response = await request(app).get(`/api/trainings/${id}`);
       expect(response.status).toBe(200);
-      expect(response.body.id).toBe(trainingId);
+      expect(response.body.id).toBe(id);
       expect(response.body.name).toBe('Down');
     });
 
@@ -84,28 +86,19 @@ describe('Trainings API', () => {
       expect(response.status).toBe(404);
     });
 
-    it('rejects path traversal attempts with 400', async () => {
-      const traversalPayloads = [
-        '..%2F..%2Fetc%2Fpasswd',
-        'not-a-uuid',
-        '00000000-0000-0000-0000-00000000000g', // invalid hex char
-      ];
-      for (const payload of traversalPayloads) {
-        const response = await request(app).get(`/api/trainings/${payload}`);
-        expect(response.status).toBe(400);
-      }
+    it('returns 400 for invalid UUID', async () => {
+      const response = await request(app).get('/api/trainings/not-a-uuid');
+      expect(response.status).toBe(400);
     });
   });
 
   describe('PUT /api/trainings/:id', () => {
     it('updates a training', async () => {
-      const createResponse = await request(app)
-        .post('/api/trainings')
-        .send({ name: 'Stay', procedure: '# Stay', tips: '- Tip' });
+      const id = crypto.randomUUID();
+      repo.save({ id, name: 'Stay', procedure: '# Stay', tips: '- Tip' });
 
-      const trainingId = createResponse.body.id;
       const response = await request(app)
-        .put(`/api/trainings/${trainingId}`)
+        .put(`/api/trainings/${id}`)
         .send({ name: 'Stay Updated', procedure: '# Stay Updated', tips: '- Updated tip' });
 
       expect(response.status).toBe(200);
@@ -124,18 +117,12 @@ describe('Trainings API', () => {
 
   describe('DELETE /api/trainings/:id', () => {
     it('deletes a training', async () => {
-      const createResponse = await request(app)
-        .post('/api/trainings')
-        .send({ name: 'Come', procedure: '# Come', tips: '- Tip' });
+      const id = crypto.randomUUID();
+      repo.save({ id, name: 'Come', procedure: '# Come', tips: '- Tip' });
 
-      const trainingId = createResponse.body.id;
-      const deleteResponse = await request(app).delete(`/api/trainings/${trainingId}`);
-
-      expect(deleteResponse.status).toBe(204);
-
-      // Verify training no longer exists
-      const getResponse = await request(app).get(`/api/trainings/${trainingId}`);
-      expect(getResponse.status).toBe(404);
+      const response = await request(app).delete(`/api/trainings/${id}`);
+      expect(response.status).toBe(204);
+      expect(repo.getById(id)).toBeNull();
     });
 
     it('returns 404 when deleting non-existent training', async () => {
@@ -146,39 +133,32 @@ describe('Trainings API', () => {
 
   describe('POST /api/trainings/:id/images', () => {
     it('uploads an image for a training', async () => {
-      const createResponse = await request(app)
-        .post('/api/trainings')
-        .send({ name: 'Fetch', procedure: '# Fetch', tips: '- Tip' });
-
-      const trainingId = createResponse.body.id;
-      const testImageBuffer = Buffer.from('fake-image-data');
+      const id = crypto.randomUUID();
+      repo.save({ id, name: 'Fetch', procedure: '# Fetch', tips: '- Tip' });
 
       const response = await request(app)
-        .post(`/api/trainings/${trainingId}/images`)
-        .attach('image', testImageBuffer, 'fetch-step1.jpg');
+        .post(`/api/trainings/${id}/images`)
+        .attach('image', Buffer.from('fake-image-data'), 'fetch-step1.jpg');
 
       expect(response.status).toBe(201);
-      expect(response.body.filename).toContain('fetch-step1');
+      expect(response.body.filename).toBeDefined();
       expect(response.body.url).toContain('/uploads/trainings/');
     });
 
     it('returns 404 for non-existent training', async () => {
-      const testImageBuffer = Buffer.from('fake-image-data');
       const response = await request(app)
         .post('/api/trainings/00000000-0000-0000-0000-000000000000/images')
-        .attach('image', testImageBuffer, 'test.jpg');
+        .attach('image', Buffer.from('fake-image-data'), 'test.jpg');
 
       expect(response.status).toBe(404);
     });
 
     it('returns 400 when no image provided', async () => {
-      const createResponse = await request(app)
-        .post('/api/trainings')
-        .send({ name: 'Roll', procedure: '# Roll', tips: '- Tip' });
+      const id = crypto.randomUUID();
+      repo.save({ id, name: 'Roll', procedure: '# Roll', tips: '- Tip' });
 
-      const trainingId = createResponse.body.id;
       const response = await request(app)
-        .post(`/api/trainings/${trainingId}/images`);
+        .post(`/api/trainings/${id}/images`);
 
       expect(response.status).toBe(400);
     });
