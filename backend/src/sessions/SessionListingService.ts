@@ -1,75 +1,72 @@
 import type { DogRepository } from '../dogs/DogRepository.js';
 import type { PlanRepository } from '../plans/PlanRepository.js';
+import type { Plan } from '../shared/types.js';
 import type { SessionRepository } from './SessionRepository.js';
 
 type SessionRecord = Record<string, unknown>;
 type ListResult = { sessions: SessionRecord[] } | { error: string };
 
+const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+const formatDate = (d: Date): string => {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const dateRange = (from: Date, to: Date): string[] => {
+  const dates: string[] = [];
+  const current = new Date(from);
+  while (current <= to) {
+    dates.push(formatDate(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+};
+
+const sessionKey = (date: string, trainingId: string) => `${date}:${trainingId}`;
+
+const scheduledTrainingIds = (plan: Plan, date: string): string[] => {
+  const dayName = weekdays[new Date(date + 'T00:00:00').getDay()];
+  return plan.schedule[dayName] || [];
+};
+
 export class SessionListingService {
   constructor(
-    private dogs: DogRepository,
-    private plans: PlanRepository,
-    private sessions: SessionRepository,
-  ) {}
+    private readonly dogs: DogRepository,
+    private readonly plans: PlanRepository,
+    private readonly sessions: SessionRepository,
+  ) { }
 
   list(dogId: string, from: Date, to: Date): ListResult {
     const dog = this.dogs.getById(dogId);
     if (!dog) return { error: 'Dog not found' };
 
     const persistedSessions = this.sessions.getByDogIdInRange(dogId, from, to);
+    const persistedMap = new Map(
+      persistedSessions.map(s => [sessionKey(s.date, s.trainingId), s as unknown as SessionRecord])
+    );
 
-    const persistedKey = (date: string, tId: string) => `${date}:${tId}`;
-    const persistedMap = new Map<string, SessionRecord>();
-    for (const s of persistedSessions) {
-      persistedMap.set(persistedKey(s.date, s.trainingId), s as unknown as SessionRecord);
-    }
+    const plan = dog.planId ? this.plans.getById(dog.planId) : null;
 
-    const results: SessionRecord[] = [];
-    const usedPersistedKeys = new Set<string>();
+    const scheduledSessions = plan
+      ? dateRange(from, to).flatMap(date =>
+        scheduledTrainingIds(plan, date).map(tid =>
+          persistedMap.get(sessionKey(date, tid)) ?? { dogId, trainingId: tid, planId: dog.planId, date, status: 'planned' }
+        )
+      )
+      : [];
 
-    if (dog.planId) {
-      const plan = this.plans.getById(dog.planId);
-      if (plan) {
-        const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const current = new Date(from);
-        while (current <= to) {
-          const dayName = weekdays[current.getDay()];
-          const yyyy = current.getFullYear();
-          const mm = String(current.getMonth() + 1).padStart(2, '0');
-          const dd = String(current.getDate()).padStart(2, '0');
-          const dateStr = `${yyyy}-${mm}-${dd}`;
-          const scheduledTrainings: string[] = plan.schedule[dayName] || [];
+    const scheduledKeys = new Set(scheduledSessions.map(s => sessionKey(s.date as string, s.trainingId as string)));
 
-          for (const tid of scheduledTrainings) {
-            const key = persistedKey(dateStr, tid);
-            if (persistedMap.has(key)) {
-              results.push(persistedMap.get(key)!);
-              usedPersistedKeys.add(key);
-            } else {
-              results.push({
-                dogId,
-                trainingId: tid,
-                planId: dog.planId,
-                date: dateStr,
-                status: 'planned'
-              });
-            }
-          }
+    const adHocSessions = persistedSessions
+      .filter(s => !scheduledKeys.has(sessionKey(s.date, s.trainingId)))
+      .map(s => s as unknown as SessionRecord);
 
-          current.setDate(current.getDate() + 1);
-        }
-      }
-    }
-
-    for (const s of persistedSessions) {
-      const key = persistedKey(s.date, s.trainingId);
-      if (!usedPersistedKeys.has(key)) {
-        results.push(s as unknown as SessionRecord);
-      }
-    }
-
-    results.sort((a, b) => (a.date as string).localeCompare(b.date as string));
-
-    return { sessions: results };
+    return {
+      sessions: [...scheduledSessions, ...adHocSessions]
+        .sort((a, b) => (a.date as string).localeCompare(b.date as string))
+    };
   }
 }

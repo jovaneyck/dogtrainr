@@ -116,6 +116,33 @@ describe('SessionListingService', () => {
     expect(adhoc!.id).toBe('ses-adhoc');
   });
 
+  it('generates planned sessions for every day in a full-week schedule with no persisted sessions', () => {
+    dogs.save({ id: dogId, name: 'Buddy', picture: 'buddy.jpg', planId });
+    plans.save({
+      id: planId, name: 'Full Week',
+      schedule: {
+        monday: [trainingId1, trainingId2],
+        tuesday: [trainingId1],
+        wednesday: [trainingId1, trainingId2],
+        thursday: [trainingId1],
+        friday: [trainingId1, trainingId2],
+        saturday: [trainingId1],
+        sunday: [trainingId1, trainingId2]
+      }
+    });
+
+    // 2026-03-16 is Monday, 2026-03-22 is Sunday
+    const result = service.list(dogId, new Date('2026-03-16T00:00:00'), new Date('2026-03-22T00:00:00'));
+    expect('sessions' in result).toBe(true);
+    if (!('sessions' in result)) return;
+
+    // 7 days: Mon(2) + Tue(1) + Wed(2) + Thu(1) + Fri(2) + Sat(1) + Sun(2) = 11
+    expect(result.sessions).toHaveLength(11);
+    expect(result.sessions.every(s => s.status === 'planned')).toBe(true);
+    expect(result.sessions[0].date).toBe('2026-03-16');
+    expect(result.sessions[result.sessions.length - 1].date).toBe('2026-03-22');
+  });
+
   it('sorts results by date', () => {
     dogs.save({ id: dogId, name: 'Buddy', picture: 'buddy.jpg' });
 

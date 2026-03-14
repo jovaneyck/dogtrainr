@@ -176,6 +176,30 @@ describe('Progress', () => {
     expect(sessionCalls.length).toBeGreaterThanOrEqual(2)
   })
 
+  it('navigating to another week shows planned sessions for the corresponding day', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // Sessions exist on Sat Feb 21 (next week, same weekday as today Feb 14)
+    mockFetch({
+      '2026-02-21': [
+        { dogId: DOG_ID, trainingId: 't1', date: '2026-02-21', status: 'planned' },
+      ],
+    })
+    renderProgress()
+
+    await waitFor(() => {
+      expect(screen.getByText('February 2026')).toBeInTheDocument()
+    })
+
+    // Navigate to next week
+    await user.click(screen.getByRole('button', { name: /next week/i }))
+
+    // Selected date should move to Sat 21 and show the planned session
+    await waitFor(() => {
+      expect(screen.getByText('Sit')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /check off/i })).toBeInTheDocument()
+    })
+  })
+
   it('shows "No sessions scheduled" when no sessions for a day', async () => {
     mockFetch({})
     renderProgress()

@@ -145,6 +145,11 @@ function ProgressView({ dogId, trainings }: ProgressViewProps) {
       next.setDate(prev.getDate() + direction * 7)
       return next
     })
+    setSelectedDate(prev => {
+      const next = new Date(prev)
+      next.setDate(prev.getDate() + direction * 7)
+      return next
+    })
   }
 
   const navigateToday = () => {
