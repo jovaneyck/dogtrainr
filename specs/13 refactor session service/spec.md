@@ -1,0 +1,2 @@
+So I want to refactor this service. The logic is very imperative with lots of mutable data and arrays. Don't like it. Refactor it uh with the following in mind. I want to see immutable data. I want to see pipelines like uh collection operations like map, filter, and reduce, and like a series of steps uh instead of like one big chunky while loop. You can introduce intermediate types like immutable records or tubules, uh, but keep the contract, the public API the same. I just want to clean up this shit a bit.
+
