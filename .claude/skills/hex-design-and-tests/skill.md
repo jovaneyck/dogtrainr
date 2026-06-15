@@ -1,6 +1,6 @@
 ---
 name: hex-design-and-tests
-description: Design guide for hexagonal architecture with vertical slices and layered tests
+description: Design guide for hexagonal architecture with vertical slices and layered tests. Use this whenever you are tasked with writing new automated tests for this project.
 ---
 
 # Hexagonal Architecture — Design & Test Guide
